@@ -1,0 +1,32 @@
+'use server';
+
+// A simple function to fetch and naively strip HTML.
+export async function fetchUrlContent(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    }
+    const html = await response.text();
+    // This is a very basic way to clean up HTML.
+    // It removes script and style tags, then all other tags, then cleans up whitespace.
+    const noScriptsOrStyles = html.replace(
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      ''
+    );
+    const noTags = noScriptsOrStyles.replace(
+      /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
+      ''
+    );
+    const plainText = noTags.replace(/<[^>]+>/g, ' ');
+    return plainText.replace(/\s\s+/g, ' ').trim();
+  } catch (error) {
+    console.error('Error fetching URL content:', error);
+    throw new Error('Could not retrieve content from the provided URL.');
+  }
+}
