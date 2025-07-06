@@ -188,7 +188,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                   className="min-h-[200px]"
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
-                  readOnly={!!jobUrl}
+                  disabled={isAnalyzingUrl || isExtractingDesc}
                 />
                 <div className="flex justify-end">
                   <Button onClick={handleTailorResume} disabled={isTailoring || !jobDescription}>
