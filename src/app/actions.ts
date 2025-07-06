@@ -50,7 +50,7 @@ export async function analyzeJobUrlAction(
     return await analyzeJobUrl(input);
   } catch (error) {
     console.error('Error analyzing job URL:', error);
-    throw new Error('Failed to analyze job URL.');
+    throw new Error(error instanceof Error ? error.message : 'Failed to analyze job URL.');
   }
 }
 
@@ -61,6 +61,6 @@ export async function extractJobDescriptionAction(
     return await extractJobDescription(input);
   } catch (error) {
     console.error('Error extracting job description:', error);
-    throw new Error('Failed to extract job description.');
+    throw new Error(error instanceof Error ? error.message : 'Failed to extract job description.');
   }
 }

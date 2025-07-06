@@ -78,7 +78,13 @@ const analyzeJobUrlFlow = ai.defineFlow(
       return {roles: []};
     }
 
-    const {output} = await analyzeContentPrompt({...input, pageContent});
+    // Truncate content to avoid exceeding model context window
+    const truncatedContent = pageContent.substring(0, 30000);
+
+    const {output} = await analyzeContentPrompt({
+      ...input,
+      pageContent: truncatedContent,
+    });
 
     if (!output) {
       throw new Error('AI failed to analyze the page content.');

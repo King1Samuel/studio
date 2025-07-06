@@ -70,9 +70,12 @@ const extractJobDescriptionFlow = ai.defineFlow(
       return {jobDescription: 'Could not retrieve content from the provided URL.'};
     }
 
+    // Truncate content to avoid exceeding model context window
+    const truncatedContent = pageContent.substring(0, 30000);
+
     const {output} = await extractContentPrompt({
       role: input.role,
-      pageContent,
+      pageContent: truncatedContent,
     });
 
     if (!output) {

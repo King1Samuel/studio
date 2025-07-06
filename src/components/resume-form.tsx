@@ -98,7 +98,11 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not find any job roles at the URL.' });
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to analyze URL. Please check the URL and try again.' });
+      toast({
+        variant: 'destructive',
+        title: 'Analysis Failed',
+        description: error instanceof Error ? error.message : 'An unknown error occurred. Please try again.',
+      });
     } finally {
       setIsAnalyzingUrl(false);
     }
@@ -115,7 +119,11 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       setFoundRoles([]); // Clear roles selection
       toast({ title: 'Success', description: `Extracted description for ${selectedRole}.` });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to extract job description.' });
+      toast({
+        variant: 'destructive',
+        title: 'Extraction Failed',
+        description: error instanceof Error ? error.message : 'An unknown error occurred. Please try again.',
+      });
     } finally {
       setIsExtractingDesc(false);
     }
