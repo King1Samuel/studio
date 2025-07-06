@@ -76,18 +76,42 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       }
     });
   };
+  
+  const isValidUrl = (urlString: string): boolean => {
+    try {
+      new URL(urlString);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
 
   const handleAnalyzeUrl = async () => {
-    if (!jobUrl.trim()) {
+    let urlToAnalyze = jobUrl.trim();
+    if (!urlToAnalyze) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please enter a URL.' });
       return;
     }
+
+    if (!urlToAnalyze.startsWith('http://') && !urlToAnalyze.startsWith('https://')) {
+        urlToAnalyze = 'https://' + urlToAnalyze;
+    }
+
+    if (!isValidUrl(urlToAnalyze)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid URL',
+        description: 'Please enter a valid web address.',
+      });
+      return;
+    }
+    
     setIsAnalyzingUrl(true);
     setJobDescription('');
     setFoundRoles([]);
     setTailoringResult(null);
     try {
-      const result = await analyzeJobUrlAction({ url: jobUrl });
+      const result = await analyzeJobUrlAction({ url: urlToAnalyze });
       if (result.jobDescription) {
         setJobDescription(result.jobDescription);
         toast({ title: 'Success', description: 'Extracted job description from URL.' });
@@ -156,7 +180,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                 <div className="flex items-center gap-2">
                   <Input 
                       id="job-url"
-                      placeholder="https://example.com/job-posting" 
+                      placeholder="example.com/job-posting" 
                       value={jobUrl}
                       onChange={(e) => setJobUrl(e.target.value)} 
                       disabled={isAnalyzingUrl || isExtractingDesc}
