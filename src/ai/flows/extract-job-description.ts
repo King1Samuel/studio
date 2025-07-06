@@ -12,20 +12,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import {fetchUrlContent} from '@/services/scraper';
 
-const getUrlContent = ai.defineTool(
-  {
-    name: 'getUrlContent',
-    description: 'Fetches the text content of a given URL.',
-    inputSchema: z.object({
-      url: z.string().describe('The URL to fetch content from.'),
-    }),
-    outputSchema: z.string(),
-  },
-  async ({url}) => {
-    return await fetchUrlContent(url);
-  }
-);
-
 const ExtractJobDescriptionInputSchema = z.object({
   url: z.string().url().describe('The URL of the job posting.'),
   role: z.string().describe('The title of the job role to extract.'),
@@ -49,17 +35,25 @@ export async function extractJobDescription(
   return extractJobDescriptionFlow(input);
 }
 
-const extractJobDescriptionPrompt = ai.definePrompt({
-  name: 'extractJobDescriptionPrompt',
-  input: {schema: ExtractJobDescriptionInputSchema},
+const extractContentPrompt = ai.definePrompt({
+  name: 'extractJobContentPrompt',
+  input: {
+    schema: z.object({
+      role: z.string(),
+      pageContent: z.string(),
+    }),
+  },
   output: {schema: ExtractJobDescriptionOutputSchema},
-  tools: [getUrlContent],
   prompt: `You are an expert at parsing job descriptions from web pages.
-    A user has provided a URL: {{{url}}} and wants the description for the role: "{{{role}}}".
+    You have been given the content from a job posting URL and are asked to find the description for the role: "{{{role}}}".
     
-    First, use the getUrlContent tool to fetch the content of the URL.
-    Then, find the specific job description for the "{{{role}}}" role and extract it.
+    Find the specific job description for the "{{{role}}}" role from the content below and extract it.
     Populate the 'jobDescription' field with the full description for that role.
+    
+    Page Content:
+    ---
+    {{{pageContent}}}
+    ---
     `,
 });
 
@@ -70,9 +64,21 @@ const extractJobDescriptionFlow = ai.defineFlow(
     outputSchema: ExtractJobDescriptionOutputSchema,
   },
   async input => {
-    const {output} = await extractJobDescriptionPrompt(input);
+    const pageContent = await fetchUrlContent(input.url);
+
+    if (!pageContent) {
+      return {jobDescription: 'Could not retrieve content from the provided URL.'};
+    }
+
+    const {output} = await extractContentPrompt({
+      role: input.role,
+      pageContent,
+    });
+
     if (!output) {
-      throw new Error('Failed to extract job description.');
+      throw new Error(
+        'AI failed to extract the job description from the page content.'
+      );
     }
     return output;
   }

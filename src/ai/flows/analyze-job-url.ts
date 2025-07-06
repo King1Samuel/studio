@@ -14,21 +14,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import {fetchUrlContent} from '@/services/scraper';
 
-const getUrlContent = ai.defineTool(
-  {
-    name: 'getUrlContent',
-    description:
-      'Fetches the text content of a given URL. Useful for when a user provides a URL for a job description.',
-    inputSchema: z.object({
-      url: z.string().describe('The URL of the job posting.'),
-    }),
-    outputSchema: z.string(),
-  },
-  async ({url}) => {
-    return await fetchUrlContent(url);
-  }
-);
-
 const AnalyzeJobUrlInputSchema = z.object({
   url: z.string().url().describe('The URL of the job posting.'),
 });
@@ -55,19 +40,28 @@ export async function analyzeJobUrl(
   return analyzeJobUrlFlow(input);
 }
 
-const analyzeJobUrlPrompt = ai.definePrompt({
-  name: 'analyzeJobUrlPrompt',
-  input: {schema: AnalyzeJobUrlInputSchema},
+const analyzeContentPrompt = ai.definePrompt({
+  name: 'analyzeJobContentPrompt',
+  input: {
+    schema: z.object({
+      url: z.string().url(),
+      pageContent: z.string(),
+    }),
+  },
   output: {schema: AnalyzeJobUrlOutputSchema},
-  tools: [getUrlContent],
   prompt: `You are an expert at parsing job descriptions from web pages.
     A user has provided a URL: {{{url}}}.
-    First, use the getUrlContent tool to fetch the content of the URL.
-    Then, analyze the content to identify all distinct job roles and their descriptions.
+    You have been given the text content of that URL.
+    Analyze the content to identify all distinct job roles and their descriptions.
 
     - If you find only ONE job role, extract its full job description. Populate the 'jobDescription' field with it, and the 'roles' array with the single job title.
     - If you find MULTIPLE job roles, list all the job titles you found in the 'roles' array. Do NOT populate the 'jobDescription' field.
     - If you find NO job roles, return an empty 'roles' array.
+
+    Here is the page content:
+    ---
+    {{{pageContent}}}
+    ---
     `,
 });
 
@@ -78,9 +72,16 @@ const analyzeJobUrlFlow = ai.defineFlow(
     outputSchema: AnalyzeJobUrlOutputSchema,
   },
   async input => {
-    const {output} = await analyzeJobUrlPrompt(input);
+    const pageContent = await fetchUrlContent(input.url);
+
+    if (!pageContent) {
+      return {roles: []};
+    }
+
+    const {output} = await analyzeContentPrompt({...input, pageContent});
+
     if (!output) {
-      throw new Error('Failed to analyze job URL.');
+      throw new Error('AI failed to analyze the page content.');
     }
     return output;
   }
