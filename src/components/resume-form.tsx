@@ -109,13 +109,15 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     setIsAnalyzingUrl(true);
     setJobDescription('');
     setFoundRoles([]);
+    setSelectedRole('');
     setTailoringResult(null);
     try {
       const result = await analyzeJobUrlAction({ url: urlToAnalyze });
-      if (result.jobDescription) {
-        setJobDescription(result.jobDescription);
-        toast({ title: 'Success', description: 'Extracted job description from URL.' });
-      } else if (result.roles.length > 0) {
+
+      if (result.roles.length === 1) {
+        toast({ title: 'Role Found', description: `Found role: ${result.roles[0]}. Extracting description...` });
+        await handleExtractDescription(result.roles[0], urlToAnalyze);
+      } else if (result.roles.length > 1) {
         setFoundRoles(result.roles);
         toast({ title: 'Multiple Roles Found', description: 'Please select a role to continue.' });
       } else {
@@ -132,16 +134,24 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     }
   };
   
-  const handleExtractDescription = async () => {
-    if (!selectedRole) return;
+  const handleExtractDescription = async (roleToExtract?: string, urlToUse?: string) => {
+    const role = roleToExtract || selectedRole;
+    const url = urlToUse || jobUrl.trim();
+
+    if (!role || !url) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Missing role or URL for extraction.' });
+      return;
+    }
+
     setIsExtractingDesc(true);
     setJobDescription('');
     setTailoringResult(null);
     try {
-      const result = await extractJobDescriptionAction({ url: jobUrl, role: selectedRole });
+      const result = await extractJobDescriptionAction({ url, role });
       setJobDescription(result.jobDescription);
       setFoundRoles([]); // Clear roles selection
-      toast({ title: 'Success', description: `Extracted description for ${selectedRole}.` });
+      setSelectedRole('');
+      toast({ title: 'Success', description: `Extracted description for ${role}.` });
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -185,7 +195,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                       onChange={(e) => setJobUrl(e.target.value)} 
                       disabled={isAnalyzingUrl || isExtractingDesc}
                   />
-                  <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || !jobUrl}>
+                  <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || isExtractingDesc || !jobUrl}>
                       {isAnalyzingUrl ? 'Analyzing...' : 'Analyze URL'}
                   </Button>
                 </div>
@@ -205,7 +215,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                               ))}
                           </SelectContent>
                       </Select>
-                      <Button onClick={handleExtractDescription} disabled={isExtractingDesc || !selectedRole}>
+                      <Button onClick={() => handleExtractDescription()} disabled={isExtractingDesc || !selectedRole}>
                           {isExtractingDesc ? 'Getting...' : 'Get Description'}
                       </Button>
                   </div>
