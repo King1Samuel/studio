@@ -44,7 +44,7 @@ const analyzeContentPrompt = ai.definePrompt({
   prompt: `You are an expert at parsing job descriptions from web pages.
     A user has provided a URL: {{{url}}}.
     You have been given the raw HTML content of that URL.
-    Analyze the HTML to identify all distinct job roles. Ignore any content inside <style> or <script> tags unless it is JSON-LD (<script type="application/ld+json">), which often contains structured job data.
+    Analyze the entire HTML content, including script tags which may contain JSON data about the jobs, to identify all distinct job roles.
     List all the job titles you found in the 'roles' array.
     If you find NO job roles, return an empty 'roles' array.
 
@@ -69,7 +69,7 @@ const analyzeJobUrlFlow = ai.defineFlow(
     }
 
     // Truncate content to avoid exceeding model context window
-    const truncatedContent = pageContent.substring(0, 30000);
+    const truncatedContent = pageContent.substring(0, 100000);
 
     const {output} = await analyzeContentPrompt({
       ...input,
