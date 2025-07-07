@@ -45,9 +45,10 @@ const extractContentPrompt = ai.definePrompt({
   },
   output: {schema: ExtractJobDescriptionOutputSchema},
   prompt: `You are an expert at parsing job descriptions from web pages.
-    You have been given the messy text content from a web page and are asked to find the full job description for the role titled: "{{{role}}}".
+    You have been given the raw HTML content from a web page and are asked to find the full job description for the role titled: "{{{role}}}".
     
-    Scour the document and find the specific, full job description for ONLY the "{{{role}}}" role. Extract the entire description, including requirements, responsibilities, qualifications, etc.
+    Scour the document and find the specific, full job description for ONLY the "{{{role}}}" role. Extract the entire description, including requirements, responsibilities, qualifications, etc. Ignore any content inside <style> or <script> tags unless it is JSON-LD (<script type="application/ld+json">), which often contains structured job data.
+    Convert the extracted description to clean, readable text.
     
     If you cannot find a clear, distinct job description for this specific role, return a helpful message in the 'jobDescription' field like "Could not extract the job description for the selected role. The content might be missing or unclear."
     

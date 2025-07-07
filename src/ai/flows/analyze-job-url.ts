@@ -43,8 +43,8 @@ const analyzeContentPrompt = ai.definePrompt({
   output: {schema: AnalyzeJobUrlOutputSchema},
   prompt: `You are an expert at parsing job descriptions from web pages.
     A user has provided a URL: {{{url}}}.
-    You have been given the text content of that URL, which might be messy and include HTML or Javascript code.
-    Analyze the content to identify all distinct job roles.
+    You have been given the raw HTML content of that URL.
+    Analyze the HTML to identify all distinct job roles. Ignore any content inside <style> or <script> tags unless it is JSON-LD (<script type="application/ld+json">), which often contains structured job data.
     List all the job titles you found in the 'roles' array.
     If you find NO job roles, return an empty 'roles' array.
 
