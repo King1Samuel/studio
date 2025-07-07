@@ -51,12 +51,16 @@ const analyzeContentPrompt = ai.definePrompt({
   output: {schema: AnalyzeJobUrlOutputSchema},
   prompt: `You are an expert at parsing job descriptions from web pages.
     A user has provided a URL: {{{url}}}.
-    You have been given the text content of that URL.
+    You have been given the text content of that URL, which might be messy and include HTML or Javascript code.
     Analyze the content to identify all distinct job roles and their descriptions.
 
-    - If you find only ONE job role, extract its full job description. Populate the 'jobDescription' field with it, and the 'roles' array with the single job title.
+    - If you find only ONE job role:
+      - Try to extract its full job description.
+      - If you can find the description, populate the 'jobDescription' field with it, and the 'roles' array with the single job title.
+      - If you can find the job title but CANNOT find a clear job description, populate the 'roles' array with the single job title and leave the 'jobDescription' field empty.
     - If you find MULTIPLE job roles, list all the job titles you found in the 'roles' array. Do NOT populate the 'jobDescription' field.
     - If you find NO job roles, return an empty 'roles' array.
+    - IMPORTANT: Never return "undefined" or "null" as a string value in any field. If a field should be empty, either omit it (if optional) or use an empty string.
 
     Here is the page content:
     ---
