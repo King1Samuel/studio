@@ -16,16 +16,13 @@ export async function fetchUrlContent(url: string): Promise<string> {
     }
     const html = await response.text();
     // This is a very basic way to clean up HTML.
-    // It removes script and style tags, then all other tags, then cleans up whitespace.
-    const noScriptsOrStyles = html.replace(
-      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-      ''
-    );
-    const noTags = noScriptsOrStyles.replace(
+    // It removes style tags, then all other tags, then cleans up whitespace.
+    // We are no longer removing script tags, as some sites embed job data in them.
+    const noStyles = html.replace(
       /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
       ''
     );
-    const plainText = noTags.replace(/<[^>]+>/g, ' ');
+    const plainText = noStyles.replace(/<[^>]+>/g, ' ');
     return plainText.replace(/\s\s+/g, ' ').trim();
   } catch (error) {
     console.error('Error fetching URL content:', error);
