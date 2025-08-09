@@ -27,7 +27,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const { toast } = useToast();
   const [isTailoring, startTailoringTransition] = useTransition();
   const [jobDescription, setJobDescription] = useState('');
-  const [tailoringResult, setTailoringResult] = useState<{ tailoredResume: string; suggestions: string } | null>(null);
+  const [tailoringResult, setTailoringResult] = useState<{ tailoredResume: string; suggestions: string; recommendations: string; } | null>(null);
 
   // New states for URL feature
   const [jobUrl, setJobUrl] = useState('');
@@ -242,6 +242,12 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
 
             {tailoringResult && (
               <div className="space-y-4 max-h-[40vh] overflow-y-auto pt-4 border-t">
+                 {tailoringResult.recommendations && (
+                  <div>
+                    <h3 className="font-bold mb-2">Recommendations</h3>
+                    <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.recommendations}</div>
+                  </div>
+                 )}
                 <div>
                   <h3 className="font-bold mb-2">AI Suggestions</h3>
                   <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.suggestions}</div>

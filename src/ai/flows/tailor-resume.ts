@@ -13,9 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const TailorResumeInputSchema = z.object({
-  resume: z
-    .string()
-    .describe('The resume content to be tailored.'),
+  resume: z.string().describe('The resume content to be tailored.'),
   jobDescription: z.string().describe('The job description to tailor the resume to.'),
 });
 export type TailorResumeInput = z.infer<typeof TailorResumeInputSchema>;
@@ -23,6 +21,7 @@ export type TailorResumeInput = z.infer<typeof TailorResumeInputSchema>;
 const TailorResumeOutputSchema = z.object({
   tailoredResume: z.string().describe('The tailored resume content.'),
   suggestions: z.string().describe('Suggestions for improving the resume.'),
+  recommendations: z.string().describe('A summary of recommended courses and projects to bridge skill gaps, presented in markdown format.'),
 });
 export type TailorResumeOutput = z.infer<typeof TailorResumeOutputSchema>;
 
@@ -34,14 +33,15 @@ const tailorResumePrompt = ai.definePrompt({
   name: 'tailorResumePrompt',
   input: {schema: TailorResumeInputSchema},
   output: {schema: TailorResumeOutputSchema},
-  prompt: `You are an expert resume writer.
+  prompt: `You are an expert resume writer and career coach.
 
 You will tailor a resume to a job description.
 
 First, analyze the job description and identify the key skills and experiences required.
 Then, rewrite the resume to highlight those skills and experiences.
-
 Provide suggestions for improving the resume.
+
+Finally, based on the gap between the resume and the job description, recommend courses (from YouTube or paid sites) and hands-on projects the user can undertake to become a better candidate. Format these recommendations in markdown.
 
 Job Description:
 {{{jobDescription}}}
