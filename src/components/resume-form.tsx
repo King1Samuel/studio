@@ -81,6 +81,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const handleViewRecommendations = () => {
     if (tailoringResult?.recommendations) {
       try {
+        // Use a more reliable way to pass data to the new tab
         localStorage.setItem('recommendations', tailoringResult.recommendations);
         const newWindow = window.open('/recommendations', '_blank');
         if (!newWindow) {
@@ -131,6 +132,8 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       
       if (result.roles.length === 1) {
         toast({ title: 'Role Found', description: `Found role: ${result.roles[0]}. Extracting description...` });
+        setFoundRoles([]);
+        setSelectedRole(result.roles[0]);
         await handleExtractDescription(result.roles[0], urlToAnalyze);
       } else if (result.roles.length > 1) {
         setFoundRoles(result.roles);
@@ -224,7 +227,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                 <div className="space-y-2 p-4 border rounded-md bg-muted/50">
                   <Label>We found multiple roles. Please select one:</Label>
                   <div className="flex items-center gap-2">
-                      <Select onValueChange={setSelectedRole} value={selectedRole} disabled={isExtractingDesc}>
+                      <Select onValueChange={(value) => { setSelectedRole(value); handleExtractDescription(value); }} value={selectedRole} disabled={isExtractingDesc}>
                           <SelectTrigger>
                               <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
@@ -234,9 +237,6 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                               ))}
                           </SelectContent>
                       </Select>
-                      <Button onClick={() => handleExtractDescription()} disabled={isExtractingDesc || !selectedRole}>
-                          {isExtractingDesc ? 'Getting...' : 'Get Description'}
-                      </Button>
                   </div>
                 </div>
               )}

@@ -46,7 +46,11 @@ export default function RecommendationsPage() {
 
   if (!isClient) {
     // Render nothing or a loading spinner on the server
-    return null;
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-8">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   if (!recommendations) {
