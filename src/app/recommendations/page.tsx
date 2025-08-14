@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -29,20 +30,24 @@ function markdownToHtml(markdown: string) {
     .replace(/\n/g, '<br />');
 }
 
-export default function RecommendationsPage() {
+function RecommendationsContent() {
   const [recommendations, setRecommendations] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsClient(true);
-    // This code runs only on the client-side
-    const storedRecommendations = localStorage.getItem('recommendations');
-    if (storedRecommendations) {
-      setRecommendations(storedRecommendations);
-      // Optional: clear the storage after reading to prevent old data from showing up
-      // localStorage.removeItem('recommendations');
+    const data = searchParams.get('data');
+    if (data) {
+      try {
+        const decodedData = atob(decodeURIComponent(data));
+        setRecommendations(decodedData);
+      } catch (error) {
+        console.error("Failed to decode recommendations from URL:", error);
+        setRecommendations('');
+      }
     }
-  }, []);
+  }, [searchParams]);
 
   if (!isClient) {
     // Render nothing or a loading spinner on the server
@@ -90,4 +95,12 @@ export default function RecommendationsPage() {
       </main>
     </div>
   );
+}
+
+export default function RecommendationsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <RecommendationsContent />
+        </Suspense>
+    )
 }

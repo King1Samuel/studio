@@ -81,13 +81,15 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const handleViewRecommendations = () => {
     if (tailoringResult?.recommendations) {
       try {
-        // Use a more reliable way to pass data to the new tab
-        localStorage.setItem('recommendations', tailoringResult.recommendations);
-        const newWindow = window.open('/recommendations', '_blank');
+        const encodedRecommendations = btoa(tailoringResult.recommendations);
+        const url = `/recommendations?data=${encodeURIComponent(encodedRecommendations)}`;
+        const newWindow = window.open(url, '_blank');
+
         if (!newWindow) {
           toast({ variant: 'destructive', title: 'Error', description: 'Please allow pop-ups for this site to view recommendations.' });
         }
       } catch (e) {
+        console.error("Error encoding or opening recommendations:", e);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not open recommendations page.' });
       }
     }
