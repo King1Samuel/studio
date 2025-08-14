@@ -21,7 +21,7 @@ export type TailorResumeInput = z.infer<typeof TailorResumeInputSchema>;
 const TailorResumeOutputSchema = z.object({
   tailoredResume: z.string().describe('The tailored resume content.'),
   suggestions: z.string().describe('Suggestions for improving the resume.'),
-  recommendations: z.string().describe('A summary of recommended courses and projects to bridge skill gaps, presented in markdown format.'),
+  recommendations: z.string().describe('A summary of recommended courses and projects to bridge skill gaps, presented in markdown format with clickable links.'),
 });
 export type TailorResumeOutput = z.infer<typeof TailorResumeOutputSchema>;
 
@@ -41,7 +41,8 @@ First, analyze the job description and identify the key skills and experiences r
 Then, rewrite the resume to highlight those skills and experiences.
 Provide suggestions for improving the resume.
 
-Finally, based on the gap between the resume and the job description, recommend courses (from YouTube or paid sites) and hands-on projects the user can undertake to become a better candidate. Format these recommendations in markdown.
+Finally, based on the gap between the resume and the job description, recommend courses (from YouTube or paid sites like Udemy, Coursera, etc.) and hands-on projects the user can undertake to become a better candidate. 
+IMPORTANT: For each course or project, you MUST provide a direct, clickable URL. Format these recommendations in markdown. For example: "[Course Name](https://example.com/course-link)".
 
 Job Description:
 {{{jobDescription}}}

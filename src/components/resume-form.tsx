@@ -16,6 +16,7 @@ import { MiscForm } from './forms/misc-form';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { ExternalLink } from 'lucide-react';
 
 
 interface ResumeFormProps {
@@ -77,6 +78,13 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     });
   };
   
+  const handleViewRecommendations = () => {
+    if (tailoringResult?.recommendations) {
+      localStorage.setItem('recommendations', tailoringResult.recommendations);
+      window.open('/recommendations', '_blank');
+    }
+  };
+  
   const isValidUrl = (urlString: string): boolean => {
     try {
       new URL(urlString);
@@ -113,7 +121,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     setTailoringResult(null);
     try {
       const result = await analyzeJobUrlAction({ url: urlToAnalyze });
-
+      
       if (result.roles.length === 1) {
         toast({ title: 'Role Found', description: `Found role: ${result.roles[0]}. Extracting description...` });
         await handleExtractDescription(result.roles[0], urlToAnalyze);
@@ -121,7 +129,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
         setFoundRoles(result.roles);
         toast({ title: 'Multiple Roles Found', description: 'Please select a role to continue.' });
       } else {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not find any job roles at the URL.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not find any job roles at the URL. Please paste the description manually.' });
       }
     } catch (error) {
       toast({
@@ -245,7 +253,10 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                  {tailoringResult.recommendations && (
                   <div>
                     <h3 className="font-bold mb-2">Recommendations</h3>
-                    <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.recommendations}</div>
+                     <Button onClick={handleViewRecommendations}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View Courses & Projects
+                    </Button>
                   </div>
                  )}
                 <div>
