@@ -54,17 +54,17 @@ const EducationSchema = z.object({
 
 const LinkSchema = z.object({
   label: z.string(),
-  url: z.string().url(),
+  url: z.string(),
 });
 
 export const ImportResumeOutputSchema = z.object({
   name: z.string(),
   title: z.string(),
   contact: z.object({
-    email: z.string().email(),
+    email: z.string(),
     phone: z.string(),
-    linkedin: z.string().url().or(z.string()),
-    github: z.string().url().or(z.string()),
+    linkedin: z.string(),
+    github: z.string(),
   }),
   professionalSummary: z.string(),
   workExperience: z.array(WorkExperienceSchema),
