@@ -11,15 +11,10 @@ import {
   TailorResumeOutput,
 } from '@/ai/flows/tailor-resume';
 import {
-  analyzeJobUrl,
-  AnalyzeJobUrlInput,
-  AnalyzeJobUrlOutput,
-} from '@/ai/flows/analyze-job-url';
-import {
-  extractJobDescription,
-  ExtractJobDescriptionInput,
-  ExtractJobDescriptionOutput,
-} from '@/ai/flows/extract-job-description';
+  analyzeAndExtractJobs,
+  AnalyzeAndExtractJobsInput,
+  AnalyzeAndExtractJobsOutput,
+} from '@/ai/flows/analyze-and-extract-jobs';
 import {
   importResume,
   ImportResumeInput,
@@ -49,26 +44,14 @@ export async function tailorResumeAction(
   }
 }
 
-export async function analyzeJobUrlAction(
-  input: AnalyzeJobUrlInput
-): Promise<AnalyzeJobUrlOutput> {
+export async function analyzeAndExtractJobsAction(
+  input: AnalyzeAndExtractJobsInput
+): Promise<AnalyzeAndExtractJobsOutput> {
   try {
-    return await analyzeJobUrl(input);
+    return await analyzeAndExtractJobs(input);
   } catch (error) {
     console.error('Error analyzing job URL:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to analyze job URL.');
-  }
-}
-
-export async function extractJobDescriptionAction(
-  input: ExtractJobDescriptionInput
-): Promise<ExtractJobDescriptionOutput> {
-  try {
-    return await extractJobDescription(input);
-  } catch (error)
- {
-    console.error('Error extracting job description:', error);
-    throw new Error(error instanceof Error ? error.message : 'Failed to extract job description.');
   }
 }
 

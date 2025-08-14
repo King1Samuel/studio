@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { tailorResumeAction, analyzeJobUrlAction, extractJobDescriptionAction, importResumeAction } from '@/app/actions';
+import { tailorResumeAction, analyzeAndExtractJobsAction, importResumeAction } from '@/app/actions';
 import { PersonalDetailsForm } from './forms/personal-details-form';
 import { ProfessionalSummaryForm } from './forms/professional-summary-form';
 import { ExperienceForm } from './forms/experience-form';
@@ -21,6 +21,11 @@ import { ExternalLink, Upload, Loader2 } from 'lucide-react';
 interface ResumeFormProps {
   resumeData: ResumeData;
   setResumeData: React.Dispatch<React.SetStateAction<ResumeData>>;
+}
+
+interface FoundJob {
+  role: string;
+  description: string;
 }
 
 export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
@@ -45,8 +50,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   // New states for URL feature
   const [jobUrl, setJobUrl] = useState('');
   const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
-  const [isExtractingDesc, setIsExtractingDesc] = useState(false);
-  const [foundRoles, setFoundRoles] = useState<string[]>([]);
+  const [foundJobs, setFoundJobs] = useState<FoundJob[]>([]);
   const [selectedRole, setSelectedRole] = useState('');
 
   const stringifyResume = (data: ResumeData) => {
@@ -68,7 +72,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     setJobDescription('');
     setTailoringResult(null);
     setJobUrl('');
-    setFoundRoles([]);
+    setFoundJobs([]);
     setSelectedRole('');
   };
 
@@ -138,22 +142,23 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     
     setIsAnalyzingUrl(true);
     setJobDescription('');
-    setFoundRoles([]);
+    setFoundJobs([]);
     setSelectedRole('');
     setTailoringResult(null);
     try {
-      const result = await analyzeJobUrlAction({ url: urlToAnalyze });
+      const result = await analyzeAndExtractJobsAction({ url: urlToAnalyze });
       
-      if (result.roles.length === 1) {
-        toast({ title: 'Role Found', description: `Found role: ${result.roles[0]}. Extracting description...` });
-        setFoundRoles([]);
-        setSelectedRole(result.roles[0]);
-        await handleExtractDescription(result.roles[0], urlToAnalyze);
-      } else if (result.roles.length > 1) {
-        setFoundRoles(result.roles);
+      if (result.jobs.length === 1) {
+        const job = result.jobs[0];
+        toast({ title: 'Role Found', description: `Found and extracted: ${job.role}.` });
+        setJobDescription(job.description);
+        setFoundJobs([]);
+        setSelectedRole('');
+      } else if (result.jobs.length > 1) {
+        setFoundJobs(result.jobs);
         toast({ title: 'Multiple Roles Found', description: 'Please select a role to continue.' });
       } else {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not find any job roles at the URL. Please paste the description manually.' });
+        toast({ variant: 'destructive', title: 'No Roles Found', description: 'Could not find any job roles at the URL. Please paste the description manually.' });
       }
     } catch (error) {
       toast({
@@ -166,36 +171,12 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     }
   };
   
-  const handleExtractDescription = async (roleToExtract?: string, urlToUse?: string) => {
-    const role = roleToExtract || selectedRole;
-    let url = urlToUse || jobUrl.trim();
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-    }
-
-    if (!role || !url) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Missing role or URL for extraction.' });
-      return;
-    }
-
-    setIsExtractingDesc(true);
-    setJobDescription('');
-    setTailoringResult(null);
-    try {
-      const result = await extractJobDescriptionAction({ url, role });
-      setJobDescription(result.jobDescription);
-      setFoundRoles([]); // Clear roles selection
-      setSelectedRole('');
-      toast({ title: 'Success', description: `Extracted description for ${role}.` });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Extraction Failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred. Please try again.',
-      });
-    } finally {
-      setIsExtractingDesc(false);
+  const handleRoleSelection = (role: string) => {
+    setSelectedRole(role);
+    const selectedJob = foundJobs.find(job => job.role === role);
+    if (selectedJob) {
+        setJobDescription(selectedJob.description);
+        toast({ title: 'Role Selected', description: `Loaded description for ${role}.`});
     }
   };
 
@@ -308,25 +289,25 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                         placeholder="example.com/job-posting" 
                         value={jobUrl}
                         onChange={(e) => setJobUrl(e.target.value)} 
-                        disabled={isAnalyzingUrl || isExtractingDesc}
+                        disabled={isAnalyzingUrl}
                     />
-                    <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || isExtractingDesc || !jobUrl}>
-                        {isAnalyzingUrl ? 'Analyzing...' : 'Analyze URL'}
+                    <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || !jobUrl}>
+                        {isAnalyzingUrl ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : 'Analyze URL'}
                     </Button>
                   </div>
                 </div>
                 
-                {foundRoles.length > 0 && (
+                {foundJobs.length > 0 && (
                   <div className="space-y-2 p-4 border rounded-md bg-muted/50">
                     <Label>We found multiple roles. Please select one:</Label>
                     <div className="flex items-center gap-2">
-                        <Select onValueChange={(value) => { setSelectedRole(value); handleExtractDescription(value); }} value={selectedRole} disabled={isExtractingDesc}>
+                        <Select onValueChange={handleRoleSelection} value={selectedRole}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
-                                {foundRoles.map(role => (
-                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                {foundJobs.map(job => (
+                                    <SelectItem key={job.role} value={job.role}>{job.role}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -342,11 +323,11 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                     className="min-h-[200px]"
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    disabled={isAnalyzingUrl || isExtractingDesc}
+                    disabled={isAnalyzingUrl}
                   />
                   <div className="flex justify-end">
                     <Button onClick={handleTailorResume} disabled={isTailoring || !jobDescription}>
-                      {isTailoring ? 'Tailoring...' : 'Generate Suggestions'}
+                      {isTailoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Tailoring...</> : 'Generate Suggestions'}
                     </Button>
                   </div>
                 </div>
