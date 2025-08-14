@@ -17,7 +17,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ExternalLink, Upload, Loader2 } from 'lucide-react';
+import * as pdfjs from 'pdfjs-dist';
 
+// Required for pdfjs-dist to work
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface ResumeFormProps {
   resumeData: ResumeData;
@@ -192,14 +195,8 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const handleImportClick = () => {
     importFileInputRef.current?.click();
   };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
+  
+  const processResumeText = (text: string) => {
       if (text) {
         startImportingTransition(async () => {
           try {
@@ -215,8 +212,38 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
           }
         });
       }
-    };
-    reader.readAsText(file);
+  }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    if (file.type === 'application/pdf') {
+        reader.onload = async (e) => {
+            if (!e.target?.result) return;
+            try {
+                const pdf = await pdfjs.getDocument({ data: e.target.result as ArrayBuffer }).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    fullText += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                }
+                processResumeText(fullText);
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'PDF Error', description: 'Could not parse the PDF file.' });
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            processResumeText(text);
+        };
+        reader.readAsText(file);
+    }
 
     // Reset file input value to allow re-uploading the same file
     if(importFileInputRef.current) {
@@ -240,7 +267,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
             ref={importFileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept=".txt,.md"
+            accept=".txt,.md,.pdf"
           />
           <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
             {isImporting ? (
