@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useTransition, useState, useRef } from 'react';
+import React, { useTransition, useState, useRef, useEffect } from 'react';
 import type { ResumeData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,10 +17,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ExternalLink, Upload, Loader2 } from 'lucide-react';
-import * as pdfjs from 'pdfjs-dist';
-
-// Required for pdfjs-dist to work
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface ResumeFormProps {
   resumeData: ResumeData;
@@ -34,6 +30,17 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const [jobDescription, setJobDescription] = useState('');
   const [tailoringResult, setTailoringResult] = useState<{ tailoredResume: string; suggestions: string; recommendations: string; } | null>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfjs, setPdfjs] = useState<any>(null);
+
+
+  useEffect(() => {
+    // Dynamically import pdfjs-dist only on the client side
+    import('pdfjs-dist').then(pdfjsDist => {
+      // Required for pdfjs-dist to work
+      pdfjsDist.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsDist.version}/build/pdf.worker.min.mjs`;
+      setPdfjs(pdfjsDist);
+    });
+  }, []);
 
   // New states for URL feature
   const [jobUrl, setJobUrl] = useState('');
@@ -221,6 +228,10 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     const reader = new FileReader();
 
     if (file.type === 'application/pdf') {
+        if (!pdfjs) {
+            toast({ variant: 'destructive', title: 'PDF Library not ready', description: 'Please wait a moment and try again.' });
+            return;
+        }
         reader.onload = async (e) => {
             if (!e.target?.result) return;
             try {
@@ -229,7 +240,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                    fullText += textContent.items.map((item: any) => ('str' in item ? item.str : '')).join(' ');
                 }
                 processResumeText(fullText);
             } catch (error) {
