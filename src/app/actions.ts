@@ -20,6 +20,12 @@ import {
   ExtractJobDescriptionInput,
   ExtractJobDescriptionOutput,
 } from '@/ai/flows/extract-job-description';
+import {
+  importResume,
+  ImportResumeInput,
+} from '@/ai/flows/import-resume';
+import type { ImportResumeOutput } from '@/lib/types';
+
 
 export async function generateSummaryAction(
   input: GenerateProfessionalSummaryInput
@@ -59,8 +65,20 @@ export async function extractJobDescriptionAction(
 ): Promise<ExtractJobDescriptionOutput> {
   try {
     return await extractJobDescription(input);
-  } catch (error) {
+  } catch (error)
+ {
     console.error('Error extracting job description:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to extract job description.');
+  }
+}
+
+export async function importResumeAction(
+  input: ImportResumeInput
+): Promise<ImportResumeOutput> {
+  try {
+    return await importResume(input);
+  } catch (error) {
+    console.error('Error importing resume:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to import resume.');
   }
 }
