@@ -1,8 +1,7 @@
-// src/ai/flows/tailor-resume.ts
 'use server';
 
 /**
- * @fileOverview A resume tailoring AI agent. It tailors the resume to a job description.
+ * @fileOverview A resume tailoring AI agent. It provides suggestions to tailor a resume to a job description.
  *
  * - tailorResume - A function that handles the resume tailoring process.
  * - TailorResumeInput - The input type for the tailorResume function.
@@ -19,8 +18,7 @@ const TailorResumeInputSchema = z.object({
 export type TailorResumeInput = z.infer<typeof TailorResumeInputSchema>;
 
 const TailorResumeOutputSchema = z.object({
-  tailoredResume: z.string().describe('The tailored resume content.'),
-  suggestions: z.string().describe('Suggestions for improving the resume.'),
+  suggestions: z.string().describe('A bulleted list of actionable suggestions for improving the resume to match the job description.'),
   recommendations: z.string().describe('A summary of recommended courses and projects to bridge skill gaps, presented in markdown format with clickable links.'),
 });
 export type TailorResumeOutput = z.infer<typeof TailorResumeOutputSchema>;
@@ -33,24 +31,20 @@ const tailorResumePrompt = ai.definePrompt({
   name: 'tailorResumePrompt',
   input: {schema: TailorResumeInputSchema},
   output: {schema: TailorResumeOutputSchema},
-  prompt: `You are an expert resume writer and career coach.
+  prompt: `You are an expert resume writer and career coach. Your task is to help a user tailor their resume to a specific job description.
 
-You will tailor a resume to a job description.
+Analyze the provided resume and job description. Then, generate two things:
 
-First, analyze the job description and identify the key skills and experiences required.
-Then, rewrite the resume to highlight those skills and experiences.
-Provide suggestions for improving the resume.
+1.  **Suggestions**: Provide a clear, concise, and actionable bulleted list of suggestions for how the user can improve their resume. Focus on highlighting the most relevant skills and experiences. For example: "- In your summary, emphasize your experience with SIEM tools as mentioned in the job description." or "- Quantify your achievement in the 'DataProtect Inc.' role by adding metrics, like the percentage of incidents you resolved."
 
-Finally, based on the gap between the resume and the job description, recommend courses (from YouTube or paid sites like Udemy, Coursera, etc.) and hands-on projects the user can undertake to become a better candidate. 
-IMPORTANT: For each course or project, you MUST provide a direct, clickable URL. Format these recommendations in markdown. For example: "[Course Name](https://example.com/course-link)".
+2.  **Recommendations**: Based on the gap between the resume and the job description, recommend online courses (from platforms like YouTube, Udemy, Coursera, etc.) and hands-on projects the user can undertake to become a better candidate.
+    IMPORTANT: For each course or project, you MUST provide a direct, clickable URL. Format these recommendations in markdown. For example: "[Course Name](https://example.com/course-link)".
 
 Job Description:
 {{{jobDescription}}}
 
 Resume:
 {{{resume}}}
-
-Tailored Resume:
 `,
 });
 

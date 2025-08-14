@@ -33,7 +33,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const [isTailoring, startTailoringTransition] = useTransition();
   const [isImporting, startImportingTransition] = useTransition();
   const [jobDescription, setJobDescription] = useState('');
-  const [tailoringResult, setTailoringResult] = useState<{ tailoredResume: string; suggestions: string; recommendations: string; } | null>(null);
+  const [tailoringResult, setTailoringResult] = useState<{ suggestions: string; recommendations: string; } | null>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [pdfjs, setPdfjs] = useState<any>(null);
 
@@ -347,10 +347,6 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                   <div>
                     <h3 className="font-bold mb-2">AI Suggestions</h3>
                     <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.suggestions}</div>
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-2">AI Tailored Resume (Copy and paste sections as needed)</h3>
-                    <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.tailoredResume}</div>
                   </div>
                 </div>
               )}

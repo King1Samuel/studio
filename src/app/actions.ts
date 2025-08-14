@@ -33,6 +33,8 @@ export async function generateSummaryAction(
   }
 }
 
+// Note: The TailorResumeOutput type from the flow no longer includes tailoredResume.
+// The client-side component has been updated to reflect this.
 export async function tailorResumeAction(
   input: TailorResumeInput
 ): Promise<TailorResumeOutput> {
