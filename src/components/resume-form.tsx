@@ -80,8 +80,15 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   
   const handleViewRecommendations = () => {
     if (tailoringResult?.recommendations) {
-      localStorage.setItem('recommendations', tailoringResult.recommendations);
-      window.open('/recommendations', '_blank');
+      try {
+        localStorage.setItem('recommendations', tailoringResult.recommendations);
+        const newWindow = window.open('/recommendations', '_blank');
+        if (!newWindow) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Please allow pop-ups for this site to view recommendations.' });
+        }
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not open recommendations page.' });
+      }
     }
   };
   
@@ -144,7 +151,11 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   
   const handleExtractDescription = async (roleToExtract?: string, urlToUse?: string) => {
     const role = roleToExtract || selectedRole;
-    const url = urlToUse || jobUrl.trim();
+    let url = urlToUse || jobUrl.trim();
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
 
     if (!role || !url) {
       toast({ variant: 'destructive', title: 'Error', description: 'Missing role or URL for extraction.' });
@@ -253,7 +264,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                  {tailoringResult.recommendations && (
                   <div>
                     <h3 className="font-bold mb-2">Recommendations</h3>
-                     <Button onClick={handleViewRecommendations}>
+                     <Button onClick={handleViewRecommendations} variant="outline" size="sm">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View Courses & Projects
                     </Button>

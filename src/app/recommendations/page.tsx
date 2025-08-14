@@ -20,15 +20,21 @@ function markdownToHtml(markdown: string) {
     .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
     .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>')
     // Lists
-    .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
-    // Replace newlines with <br> for paragraph breaks
+    .replace(/^\* (.*$)/gim, '<li>$1</li>')
+    // Add <ul> around list items
+    .replace(/<li>/g, '<ul><li>')
+    .replace(/<\/li>\n<ul>/g, '</li><li>')
+    .replace(/<\/li>(?!<li>)/g, '</li></ul>')
+    // Replace newlines with <br> for paragraph breaks that are not part of other tags
     .replace(/\n/g, '<br />');
 }
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState('');
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     // This code runs only on the client-side
     const storedRecommendations = localStorage.getItem('recommendations');
     if (storedRecommendations) {
@@ -37,6 +43,11 @@ export default function RecommendationsPage() {
       // localStorage.removeItem('recommendations');
     }
   }, []);
+
+  if (!isClient) {
+    // Render nothing or a loading spinner on the server
+    return null;
+  }
 
   if (!recommendations) {
     return (
@@ -64,7 +75,7 @@ export default function RecommendationsPage() {
         <Card>
           <CardContent className="p-6">
             <div
-              className="prose prose-blue max-w-none"
+              className="prose prose-blue max-w-none [&_ul]:list-disc [&_ul]:ml-4 [&_a]:text-blue-600 hover:[&_a]:underline"
               dangerouslySetInnerHTML={{ __html: markdownToHtml(recommendations) }}
             />
           </CardContent>
