@@ -51,7 +51,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
           </ResumeSection>
         )}
 
-        {data.workExperience.length > 0 && (
+        {data.workExperience && data.workExperience.length > 0 && (
           <ResumeSection title="Work Experience">
             {data.workExperience.map((exp) => (
               <div key={exp.id} className="mb-4">
@@ -68,7 +68,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
           </ResumeSection>
         )}
 
-        {(data.education.length > 0 || data.highlights) && (
+        {(data.education && data.education.length > 0) || data.highlights && (
           <ResumeSection title="Education & Certifications">
             {data.education.map((edu) => (
               <div key={edu.id} className="mb-2">
@@ -84,7 +84,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
         )}
         
         <div className="grid grid-cols-2 gap-x-8">
-          {data.skills.length > 0 && (
+          {data.skills && data.skills.length > 0 && (
             <div>
               <ResumeSection title="Key Skills">
                 <ul className="list-disc list-inside">
@@ -93,7 +93,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
               </ResumeSection>
             </div>
           )}
-          {data.tools.length > 0 && (
+          {data.tools && data.tools.length > 0 && (
             <div>
               <ResumeSection title="Technical Tools">
                  <ul className="list-disc list-inside">
@@ -105,7 +105,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
         </div>
         
         <div className="grid grid-cols-2 gap-x-8">
-            {data.languages.length > 0 && (
+            {data.languages && data.languages.length > 0 && (
               <div>
                 <ResumeSection title="Languages">
                   <ul className="list-disc list-inside">
@@ -114,7 +114,7 @@ export const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps
                 </ResumeSection>
               </div>
             )}
-            {data.links.length > 0 && (
+            {data.links && data.links.length > 0 && (
               <div>
                  <ResumeSection title="Links">
                     <ul>
