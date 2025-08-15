@@ -14,7 +14,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body flex flex-col">
-      <AppHeader resumePreviewRef={resumePreviewRef} />
+      <AppHeader resumePreviewRef={resumePreviewRef} resumeData={resumeData}/>
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 h-[calc(100vh-4rem)]">
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <div className="p-8">
