@@ -276,6 +276,8 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       resetDialogState();
     }
   };
+  
+  const hasActionableSuggestions = tailoringResult?.suggestions && tailoringResult.suggestions.trim().startsWith('-');
 
   return (
     <div className="space-y-8">
@@ -376,28 +378,32 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
                     <h3 className="font-bold mb-2">AI Suggestions</h3>
                     <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.suggestions}</div>
                   </div>
-                   <Separator />
-                    <div className="p-4 bg-background rounded-md space-y-3">
-                        <h4 className="font-semibold">Implement Suggestions?</h4>
-                        <p className="text-sm text-muted-foreground">
-                            Would you like the AI to automatically apply these suggestions to your resume?
-                        </p>
-                        <div className="flex justify-end gap-2">
-                             <Button
-                                variant="outline"
-                                onClick={() => {
-                                  toast({ title: "Great!", description: "You can apply the suggestions manually." });
-                                  setIsTailorDialogOpen(false);
-                                }}
-                            >
-                                No, thanks
-                            </Button>
-                            <Button onClick={handleApplySuggestions} disabled={isApplying}>
-                              {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Yes, apply changes
-                            </Button>
+                   {hasActionableSuggestions && (
+                     <>
+                        <Separator />
+                        <div className="p-4 bg-background rounded-md space-y-3">
+                            <h4 className="font-semibold">Implement Suggestions?</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Would you like the AI to automatically apply these suggestions to your resume?
+                            </p>
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      toast({ title: "Great!", description: "You can apply the suggestions manually." });
+                                      setIsTailorDialogOpen(false);
+                                    }}
+                                >
+                                    No, thanks
+                                </Button>
+                                <Button onClick={handleApplySuggestions} disabled={isApplying}>
+                                  {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Yes, apply changes
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                     </>
+                   )}
                 </div>
               )}
             </DialogContent>
