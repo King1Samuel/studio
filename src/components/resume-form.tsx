@@ -4,9 +4,10 @@ import React, { useTransition, useState, useRef, useEffect } from 'react';
 import type { ResumeData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { tailorResumeAction, analyzeAndExtractJobsAction, importResumeAction } from '@/app/actions';
+import { tailorResumeAction, analyzeAndExtractJobsAction, importResumeAction, applyResumeSuggestionsAction } from '@/app/actions';
 import { PersonalDetailsForm } from './forms/personal-details-form';
 import { ProfessionalSummaryForm } from './forms/professional-summary-form';
 import { ExperienceForm } from './forms/experience-form';
@@ -32,10 +33,22 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   const { toast } = useToast();
   const [isTailoring, startTailoringTransition] = useTransition();
   const [isImporting, startImportingTransition] = useTransition();
+  const [isApplying, startApplyingTransition] = useTransition();
+
   const [jobDescription, setJobDescription] = useState('');
   const [tailoringResult, setTailoringResult] = useState<{ suggestions: string; recommendations: string; } | null>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [pdfjs, setPdfjs] = useState<any>(null);
+
+  // New states for URL feature
+  const [jobUrl, setJobUrl] = useState('');
+  const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
+  const [foundJobs, setFoundJobs] = useState<FoundJob[]>([]);
+  const [selectedRole, setSelectedRole] = useState('');
+
+  // New state for confirmation dialog
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
+  const [isTailorDialogOpen, setIsTailorDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -46,12 +59,6 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       setPdfjs(pdfjsDist);
     });
   }, []);
-
-  // New states for URL feature
-  const [jobUrl, setJobUrl] = useState('');
-  const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
-  const [foundJobs, setFoundJobs] = useState<FoundJob[]>([]);
-  const [selectedRole, setSelectedRole] = useState('');
 
   const stringifyResume = (data: ResumeData) => {
     let resumeString = `Name: ${data.name}\nTitle: ${data.title}\n\n`;
@@ -88,6 +95,9 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
         const result = await tailorResumeAction({ resume: resumeString, jobDescription });
         setTailoringResult(result);
         toast({ title: 'Success', description: 'Resume tailored successfully. Review the suggestions.' });
+        if (result.suggestions) {
+            setShowApplyDialog(true);
+        }
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to tailor resume.' });
       }
@@ -109,6 +119,30 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not open recommendations page.' });
       }
     }
+  };
+
+  const handleApplySuggestions = () => {
+    if (!tailoringResult?.suggestions) return;
+
+    startApplyingTransition(async () => {
+        try {
+            const updatedResume = await applyResumeSuggestionsAction({
+                resumeData,
+                suggestions: tailoringResult.suggestions
+            });
+            setResumeData(updatedResume);
+            toast({ title: 'Success', description: 'AI suggestions have been applied to your resume.' });
+            setIsTailorDialogOpen(false); // Close the main dialog
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Apply Failed',
+                description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            });
+        } finally {
+            setShowApplyDialog(false);
+        }
+    });
   };
   
   const isValidUrl = (urlString: string): boolean => {
@@ -244,6 +278,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
   };
 
   const onDialogOpenChange = (open: boolean) => {
+    setIsTailorDialogOpen(open);
     if (!open) {
       resetDialogState();
     }
@@ -269,7 +304,7 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
             )}
             Import Resume
           </Button>
-          <Dialog onOpenChange={onDialogOpenChange}>
+          <Dialog open={isTailorDialogOpen} onOpenChange={onDialogOpenChange}>
             <DialogTrigger asChild>
               <Button>✨ Tailor with AI</Button>
             </DialogTrigger>
@@ -354,6 +389,25 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
           </Dialog>
         </div>
       </div>
+       <AlertDialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Implement Suggestions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Would you like the AI to automatically apply these suggestions to your resume?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => toast({ title: "Great!", description: "You can apply the suggestions manually."})}>
+                No
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleApplySuggestions} disabled={isApplying}>
+              {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Yes, apply changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PersonalDetailsForm resumeData={resumeData} setResumeData={setResumeData} />
       <ProfessionalSummaryForm resumeData={resumeData} setResumeData={setResumeData} />

@@ -19,6 +19,10 @@ import {
   importResume,
   ImportResumeInput,
 } from '@/ai/flows/import-resume';
+import {
+    applyResumeSuggestions,
+    ApplyResumeSuggestionsInput,
+} from '@/ai/flows/apply-resume-suggestions';
 import type { ImportResumeOutput } from '@/lib/types';
 
 
@@ -66,4 +70,15 @@ export async function importResumeAction(
     console.error('Error importing resume:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to import resume.');
   }
+}
+
+export async function applyResumeSuggestionsAction(
+    input: ApplyResumeSuggestionsInput
+): Promise<ImportResumeOutput> {
+    try {
+        return await applyResumeSuggestions(input);
+    } catch (error) {
+        console.error('Error applying suggestions:', error);
+        throw new Error(error instanceof Error ? error.message : 'Failed to apply suggestions.');
+    }
 }
