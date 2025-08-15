@@ -264,11 +264,11 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
       </html>
     `;
 
-    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const source = 'data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8,' + encodeURIComponent(sourceHTML);
     const fileDownload = document.createElement('a');
     document.body.appendChild(fileDownload);
     fileDownload.href = source;
-    fileDownload.download = 'resume.doc';
+    fileDownload.download = 'resume.docx';
     fileDownload.click();
     document.body.removeChild(fileDownload);
   };
