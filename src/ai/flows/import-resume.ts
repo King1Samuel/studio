@@ -34,8 +34,10 @@ const importResumePrompt = ai.definePrompt({
 
 The user's entire resume is provided below. Your task is to meticulously extract every piece of relevant information and format it according to the specified JSON schema.
 
-- For 'workExperience', ensure each job is a separate object with a unique 'id', and capture the full 'description' for each role, preserving line breaks.
-- For 'education', do the same.
+- For 'workExperience', ensure each job is a separate object.
+- CRITICAL: In the 'description' for each job, each distinct achievement or bullet point from the original resume should be a single line in the output. If a bullet point wraps to a new line in the source text, combine it into one line.
+- Each line in the 'description' should start with a hyphen '-'.
+- For 'education', do the same for descriptions if any.
 - For 'contact', extract email, phone, and full URLs for LinkedIn and GitHub if available. If a URL is just a path (e.g., linkedin.com/in/name), reconstruct the full URL (e.g., https://linkedin.com/in/name).
 - 'skills' and 'tools' should be lists of strings.
 - 'highlights' should contain certifications like CISSP or CEH.
