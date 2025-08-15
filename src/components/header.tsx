@@ -4,9 +4,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Tab, TabStopType, TabStopPosition, UnderlineType, PageBreak } from 'docx';
+import { saveAs } from 'file-saver';
 import type { ResumeData } from '@/lib/types';
-import { initialData } from '@/lib/initial-data';
-
 
 interface AppHeaderProps {
   resumePreviewRef: React.RefObject<HTMLDivElement>;
@@ -180,97 +180,70 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
 
   const handleDownloadWord = () => {
     const data = resumeData;
-    const styles = `
-      body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #333; }
-      h1, h2, h3, p { margin: 0; }
-      h1 { font-size: 28pt; text-align: center; }
-      h2 { font-size: 14pt; border-bottom: 1px solid #bbb; padding-bottom: 2px; margin-top: 12px; margin-bottom: 6px; }
-      h3 { font-size: 11pt; font-weight: bold; }
-      ul { padding-left: 20px; margin-top: 4px; }
-      li { margin-bottom: 2px; }
-      .header p { text-align: center; }
-      .title { font-size: 14pt; text-align: center; margin-bottom: 4px; }
-      .contact { font-size: 10pt; text-align: center; color: #555; margin-bottom: 12px; }
-      .job { margin-bottom: 12px; }
-      .job-title { display: flex; justify-content: space-between; }
-      .job-company { font-style: italic; }
-      .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    `;
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({ text: data.name, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: data.title, alignment: AlignmentType.CENTER, style: "TOC1" }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun(
+                [
+                  data.contact.email,
+                  data.contact.phone,
+                  data.contact.linkedin,
+                  data.contact.github,
+                ].filter(Boolean).join(' | ')
+              ),
+            ],
+            spacing: { after: 400 },
+          }),
 
-    let content = `
-      <div class="header">
-        <h1>${data.name}</h1>
-        <p class="title">${data.title}</p>
-        <p class="contact">${[data.contact.email, data.contact.phone, data.contact.linkedin, data.contact.github].filter(Boolean).join('  |  ')}</p>
-      </div>
-    `;
+          ...(data.professionalSummary ? [
+            new Paragraph({ text: "Professional Summary", heading: HeadingLevel.HEADING_2, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
+            new Paragraph({ text: data.professionalSummary, spacing: { after: 200 } }),
+          ] : []),
+          
+          ...(data.workExperience?.length > 0 ? [
+            new Paragraph({ text: "Work Experience", heading: HeadingLevel.HEADING_2, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
+            ...data.workExperience.flatMap(exp => [
+              new Paragraph({
+                children: [
+                  new TextRun({ text: exp.role, bold: true }),
+                  new TextRun({ text: `\t${exp.dates}` }),
+                ],
+                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }]
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: exp.company, italics: true })],
+              }),
+              ...exp.description.split('\n').filter(l => l.trim()).map(line => new Paragraph({ text: line.replace(/^- /, ''), bullet: { level: 0 } })),
+              new Paragraph({ text: "" }), // spacing
+            ]),
+          ] : []),
 
-    if (data.professionalSummary) {
-      content += `<h2>Professional Summary</h2><p>${data.professionalSummary}</p>`;
-    }
+          ...((data.education?.length > 0 || data.highlights) ? [
+              new Paragraph({ text: "Education & Certifications", heading: HeadingLevel.HEADING_2, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
+              ...data.education.map(edu => 
+                  new Paragraph({
+                      children: [
+                          new TextRun({ text: edu.institution, bold: true }),
+                          new TextRun({ text: `\t${edu.dates}` }),
+                      ],
+                      tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }]
+                  }),
+              ),
+              ...(data.highlights ? [new Paragraph({ text: data.highlights })] : []),
+              new Paragraph({ text: "" }), // spacing
+          ] : []),
+        ],
+      }],
+    });
 
-    if (data.workExperience?.length > 0) {
-      content += `<h2>Work Experience</h2>`;
-      data.workExperience.forEach(exp => {
-        content += `
-          <div class="job">
-            <div class="job-title">
-              <h3>${exp.role}</h3>
-              <p>${exp.dates}</p>
-            </div>
-            <p class="job-company">${exp.company}</p>
-            <ul>
-              ${exp.description.split('\n').filter(l => l.trim()).map(line => `<li>${line.replace(/^- /, '')}</li>`).join('')}
-            </ul>
-          </div>
-        `;
-      });
-    }
-    
-     if (data.education?.length > 0 || data.highlights) {
-        content += `<h2>Education & Certifications</h2>`;
-        data.education.forEach(edu => {
-             content += `<div class="job"><div class="job-title"><p><strong>${edu.institution}</strong></p><p>${edu.dates}</p></div><p><em>${edu.degree}</em></p></div>`;
-        });
-        if(data.highlights) content += `<p>${data.highlights}</p>`
-    }
-
-    content += `<br/><table><tr><td style="vertical-align: top; width: 50%;">`;
-    if (data.skills?.length > 0) {
-        content += `<h3>Key Skills</h3><ul>${data.skills.map(s => `<li>${s}</li>`).join('')}</ul>`;
-    }
-    if (data.languages?.length > 0) {
-        content += `<h3 style="margin-top: 12px;">Languages</h3><ul>${data.languages.map(l => `<li>${l}</li>`).join('')}</ul>`;
-    }
-    content += `</td><td style="vertical-align: top; width: 50%;">`;
-     if (data.tools?.length > 0) {
-        content += `<h3>Technical Tools</h3><ul>${data.tools.map(t => `<li>${t}</li>`).join('')}</ul>`;
-    }
-    if (data.links?.length > 0) {
-        content += `<h3 style="margin-top: 12px;">Links</h3><ul>${data.links.map(l => `<li><a href="${l.url}">${l.label}</a></li>`).join('')}</ul>`;
-    }
-    content += `</td></tr></table>`;
-
-
-    const sourceHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset='utf-8'>
-          <title>Resume</title>
-          <style>${styles}</style>
-        </head>
-        <body>${content}</body>
-      </html>
-    `;
-
-    const source = 'data:application/msword;charset=utf-8,' + encodeURIComponent(sourceHTML);
-    const fileDownload = document.createElement('a');
-    document.body.appendChild(fileDownload);
-    fileDownload.href = source;
-    fileDownload.download = 'resume.doc';
-    fileDownload.click();
-    document.body.removeChild(fileDownload);
+    Packer.toBlob(doc).then(blob => {
+      saveAs(blob, "resume.docx");
+    });
   };
 
   return (
