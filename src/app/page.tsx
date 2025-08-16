@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AppHeader } from '@/components/header';
 import { ResumeForm } from '@/components/resume-form';
 import { ResumePreview } from '@/components/resume-preview';
@@ -8,14 +8,34 @@ import type { ResumeData } from '@/lib/types';
 import { initialData } from '@/lib/initial-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { loadResumeAction } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [resumeData, setResumeData] = useState<ResumeData>(initialData);
   const resumePreviewRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await loadResumeAction();
+        if (data) {
+          setResumeData(data);
+          toast({ title: 'Resume Loaded', description: 'Successfully loaded your saved resume from the database.' });
+        }
+      } catch (error) {
+        console.error("Failed to load resume on startup:", error);
+        // Do not show a toast on initial load failure, as it might just mean no resume is saved yet.
+      }
+    };
+    loadData();
+  }, [toast]);
+
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body flex flex-col">
-      <AppHeader resumePreviewRef={resumePreviewRef} resumeData={resumeData}/>
+      <AppHeader resumePreviewRef={resumePreviewRef} resumeData={resumeData} setResumeData={setResumeData}/>
       <main className="flex-1 lg:grid lg:grid-cols-2 h-[calc(100vh-4rem)]">
         {/* Desktop View: Side-by-side */}
         <div className="hidden lg:block h-full">

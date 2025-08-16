@@ -23,7 +23,9 @@ import {
     applyResumeSuggestions,
     ApplyResumeSuggestionsInput,
 } from '@/ai/flows/apply-resume-suggestions';
-import type { ImportResumeOutput } from '@/lib/types';
+import type { ImportResumeOutput, ResumeData } from '@/lib/types';
+import clientPromise from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 
 export async function generateSummaryAction(
@@ -80,5 +82,49 @@ export async function applyResumeSuggestionsAction(
     } catch (error) {
         console.error('Error applying suggestions:', error);
         throw new Error(error instanceof Error ? error.message : 'Failed to apply suggestions.');
+    }
+}
+
+
+const DB_NAME = 'resumaiDB';
+const COLLECTION_NAME = 'resumes';
+// Use a fixed ID for this simple test case to always update the same document
+const RESUME_ID = '66a13e2d5c5b3b0a7b5b5b5b'; 
+
+export async function saveResumeAction(resumeData: Omit<ResumeData, '_id'>): Promise<{ success: boolean }> {
+    try {
+        const client = await clientPromise;
+        const db = client.db(DB_NAME);
+        const collection = db.collection(COLLECTION_NAME);
+
+        await collection.updateOne(
+            { _id: new ObjectId(RESUME_ID) },
+            { $set: resumeData },
+            { upsert: true }
+        );
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving resume:', error);
+        throw new Error('Failed to save resume to the database.');
+    }
+}
+
+export async function loadResumeAction(): Promise<ResumeData | null> {
+    try {
+        const client = await clientPromise;
+        const db = client.db(DB_NAME);
+        const collection = db.collection(COLLECTION_NAME);
+
+        const result = await collection.findOne({ _id: new ObjectId(RESUME_ID) });
+
+        if (result) {
+            // The _id is not part of the ResumeData type, so we remove it.
+            const { _id, ...resumeData } = result;
+            return resumeData as ResumeData;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error loading resume:', error);
+        throw new Error('Failed to load resume from the database.');
     }
 }

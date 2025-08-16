@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ObjectId } from 'mongodb';
 
 export interface WorkExperience {
   id: string;
@@ -16,6 +17,7 @@ export interface Education {
 }
 
 export interface ResumeData {
+  _id?: ObjectId; // Optional _id field for MongoDB
   name: string;
   title: string;
   contact: {
