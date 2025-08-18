@@ -149,7 +149,14 @@ export async function applyResumeSuggestionsAction(
 const DB_NAME = 'resumaiDB';
 const COLLECTION_NAME = 'resumes';
 
+function checkDbConfigured() {
+    if (!process.env.MONGODB_URI || process.env.MONGODB_URI === "your_mongodb_connection_string_here") {
+        throw new Error('Database is not configured. Please add your MongoDB connection string to the .env file.');
+    }
+}
+
 export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'userId'>): Promise<{ success: boolean }> {
+    checkDbConfigured();
     const userId = await getUserIdFromSession();
     if (!userId) {
         throw new Error('You must be logged in to save a resume.');
@@ -173,6 +180,7 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
 }
 
 export async function loadResumeAction(): Promise<ResumeData | null> {
+    checkDbConfigured();
     const userId = await getUserIdFromSession();
     if (!userId) {
         // This is not an error, it just means no user is logged in.
