@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import { AppHeader } from '@/components/header';
 import { ResumeForm } from '@/components/resume-form';
 import { ResumePreview } from '@/components/resume-preview';
@@ -15,33 +16,49 @@ export default function Home() {
   const [resumeData, setResumeData] = useState<ResumeData>(initialData);
   const resumePreviewRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [isLoading, startLoadTransition] = useTransition();
 
-  useEffect(() => {
-    const loadData = async () => {
+  const handleLoadResume = () => {
+    startLoadTransition(async () => {
       try {
         const data = await loadResumeAction();
         if (data) {
           setResumeData(data);
-          toast({ title: 'Resume Loaded', description: 'Successfully loaded your saved resume from the database.' });
+          toast({ title: 'Success', description: 'Loaded your saved resume from the database.' });
+        } else {
+           toast({ title: 'Not Found', description: 'No saved resume was found in the database.' });
         }
       } catch (error) {
-        console.error("Failed to load resume on startup:", error);
-        // Do not show a toast on initial load failure, as it might just mean no resume is saved yet.
+        toast({
+          variant: 'destructive',
+          title: 'Load Failed',
+          description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        });
       }
-    };
-    loadData();
-  }, [toast]);
+    });
+  };
+
+  useEffect(() => {
+    // Automatically load data when component mounts
+    handleLoadResume();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body flex flex-col">
-      <AppHeader resumePreviewRef={resumePreviewRef} resumeData={resumeData} setResumeData={setResumeData}/>
+      <AppHeader resumePreviewRef={resumePreviewRef} resumeData={resumeData} />
       <main className="flex-1 lg:grid lg:grid-cols-2 h-[calc(100vh-4rem)]">
         {/* Desktop View: Side-by-side */}
         <div className="hidden lg:block h-full">
           <ScrollArea className="h-[calc(100vh-4rem)]">
             <div className="p-8">
-              <ResumeForm resumeData={resumeData} setResumeData={setResumeData} />
+              <ResumeForm 
+                resumeData={resumeData} 
+                setResumeData={setResumeData} 
+                onLoadResume={handleLoadResume}
+                isLoadingResume={isLoading}
+              />
             </div>
           </ScrollArea>
         </div>
@@ -63,7 +80,12 @@ export default function Home() {
             <TabsContent value="editor" className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
                  <div className="p-4 pt-6">
-                    <ResumeForm resumeData={resumeData} setResumeData={setResumeData} />
+                    <ResumeForm 
+                      resumeData={resumeData} 
+                      setResumeData={setResumeData} 
+                      onLoadResume={handleLoadResume}
+                      isLoadingResume={isLoading}
+                    />
                  </div>
               </ScrollArea>
             </TabsContent>

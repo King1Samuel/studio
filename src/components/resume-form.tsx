@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useTransition, useState, useRef, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { tailorResumeAction, analyzeAndExtractJobsAction, importResumeAction, applyResumeSuggestionsAction } from '@/app/actions';
+import { tailorResumeAction, analyzeAndExtractJobsAction, importResumeAction, applyResumeSuggestionsAction, saveResumeAction } from '@/app/actions';
 import { PersonalDetailsForm } from './forms/personal-details-form';
 import { ProfessionalSummaryForm } from './forms/professional-summary-form';
 import { ExperienceForm } from './forms/experience-form';
@@ -16,12 +17,14 @@ import { MiscForm } from './forms/misc-form';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ExternalLink, Upload, Loader2 } from 'lucide-react';
+import { ExternalLink, Upload, Loader2, Save, FolderOpen } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 interface ResumeFormProps {
   resumeData: ResumeData;
   setResumeData: React.Dispatch<React.SetStateAction<ResumeData>>;
+  onLoadResume: () => void;
+  isLoadingResume: boolean;
 }
 
 interface FoundJob {
@@ -29,11 +32,12 @@ interface FoundJob {
   description: string;
 }
 
-export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
+export function ResumeForm({ resumeData, setResumeData, onLoadResume, isLoadingResume }: ResumeFormProps) {
   const { toast } = useToast();
   const [isTailoring, startTailoringTransition] = useTransition();
   const [isImporting, startImportingTransition] = useTransition();
   const [isApplying, startApplyingTransition] = useTransition();
+  const [isSaving, startSaveTransition] = useTransition();
 
   const [jobDescription, setJobDescription] = useState('');
   const [tailoringResult, setTailoringResult] = useState<{ suggestions: string; recommendations: string; } | null>(null);
@@ -79,6 +83,21 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
     setJobUrl('');
     setFoundJobs([]);
     setSelectedRole('');
+  };
+  
+  const handleSaveResume = () => {
+    startSaveTransition(async () => {
+      try {
+        await saveResumeAction(resumeData);
+        toast({ title: 'Success', description: 'Your resume has been saved to the database.' });
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Save Failed',
+          description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        });
+      }
+    });
   };
 
   const handleTailorResume = () => {
@@ -284,131 +303,145 @@ export function ResumeForm({ resumeData, setResumeData }: ResumeFormProps) {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold font-headline">Resume Editor</h2>
         <div className="flex items-center gap-2">
-           <input
-            type="file"
-            ref={importFileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".txt,.md,.pdf"
-          />
-          <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
-            {isImporting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="mr-2 h-4 w-4" />
-            )}
-            Import Resume
-          </Button>
-          <Dialog open={isTailorDialogOpen} onOpenChange={onDialogOpenChange}>
-            <DialogTrigger asChild>
-              <Button>✨ Tailor with AI</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Tailor Resume for a Job</DialogTitle>
-                <DialogDescription>
-                  Paste a job URL or description below. Our AI will analyze it and suggest improvements to your resume.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="job-url">Job Posting URL</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                        id="job-url"
-                        placeholder="example.com/job-posting" 
-                        value={jobUrl}
-                        onChange={(e) => setJobUrl(e.target.value)} 
-                        disabled={isAnalyzingUrl}
-                    />
-                    <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || !jobUrl}>
-                        {isAnalyzingUrl ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : 'Analyze URL'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {foundJobs.length > 0 && (
-                  <div className="space-y-2 p-4 border rounded-md bg-muted/50">
-                    <Label>We found multiple roles. Please select one:</Label>
+           <Button variant="outline" size="sm" onClick={handleSaveResume} disabled={isSaving}>
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+              Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={onLoadResume} disabled={isLoadingResume}>
+              {isLoadingResume ? <Loader2 className="animate-spin" /> : <FolderOpen />}
+              Load
+            </Button>
+        </div>
+      </div>
+      <Separator />
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">AI Tools</h3>
+         <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={importFileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept=".txt,.md,.pdf"
+            />
+            <Button variant="outline" onClick={handleImportClick} disabled={isImporting}>
+              {isImporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Import Resume
+            </Button>
+            <Dialog open={isTailorDialogOpen} onOpenChange={onDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button>✨ Tailor with AI</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Tailor Resume for a Job</DialogTitle>
+                  <DialogDescription>
+                    Paste a job URL or description below. Our AI will analyze it and suggest improvements to your resume.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-url">Job Posting URL</Label>
                     <div className="flex items-center gap-2">
-                        <Select onValueChange={handleRoleSelection} value={selectedRole}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {foundJobs.map(job => (
-                                    <SelectItem key={job.role} value={job.role}>{job.role}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label htmlFor="job-description">Job Description</Label>
-                  <Textarea
-                    id="job-description"
-                    placeholder="Paste job description here, or it will be filled in from the URL analysis."
-                    className="min-h-[200px]"
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    disabled={isAnalyzingUrl}
-                  />
-                  <div className="flex justify-end">
-                    <Button onClick={handleTailorResume} disabled={isTailoring || !jobDescription}>
-                      {isTailoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Tailoring...</> : 'Generate Suggestions'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {tailoringResult && (
-                <div className="space-y-4 max-h-[40vh] overflow-y-auto pt-4 border-t">
-                   {tailoringResult.recommendations && (
-                    <div>
-                      <h3 className="font-bold mb-2">Recommendations</h3>
-                       <Button onClick={handleViewRecommendations} variant="outline" size="sm">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          View Courses & Projects
+                      <Input 
+                          id="job-url"
+                          placeholder="example.com/job-posting" 
+                          value={jobUrl}
+                          onChange={(e) => setJobUrl(e.target.value)} 
+                          disabled={isAnalyzingUrl}
+                      />
+                      <Button onClick={handleAnalyzeUrl} disabled={isAnalyzingUrl || !jobUrl}>
+                          {isAnalyzingUrl ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : 'Analyze URL'}
                       </Button>
                     </div>
-                   )}
-                  <div>
-                    <h3 className="font-bold mb-2">AI Suggestions</h3>
-                    <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.suggestions}</div>
                   </div>
-                   {hasActionableSuggestions && (
-                     <>
-                        <Separator />
-                        <div className="p-4 bg-background rounded-md space-y-3">
-                            <h4 className="font-semibold">Implement Suggestions?</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Would you like the AI to automatically apply these suggestions to your resume?
-                            </p>
-                            <div className="flex justify-end gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                      toast({ title: "Great!", description: "You can apply the suggestions manually." });
-                                      setIsTailorDialogOpen(false);
-                                    }}
-                                >
-                                    No, thanks
-                                </Button>
-                                <Button onClick={handleApplySuggestions} disabled={isApplying}>
-                                  {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                  Yes, apply changes
-                                </Button>
-                            </div>
-                        </div>
-                     </>
-                   )}
+                  
+                  {foundJobs.length > 0 && (
+                    <div className="space-y-2 p-4 border rounded-md bg-muted/50">
+                      <Label>We found multiple roles. Please select one:</Label>
+                      <div className="flex items-center gap-2">
+                          <Select onValueChange={handleRoleSelection} value={selectedRole}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select a role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {foundJobs.map(job => (
+                                      <SelectItem key={job.role} value={job.role}>{job.role}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="job-description">Job Description</Label>
+                    <Textarea
+                      id="job-description"
+                      placeholder="Paste job description here, or it will be filled in from the URL analysis."
+                      className="min-h-[200px]"
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      disabled={isAnalyzingUrl}
+                    />
+                    <div className="flex justify-end">
+                      <Button onClick={handleTailorResume} disabled={isTailoring || !jobDescription}>
+                        {isTailoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Tailoring...</> : 'Generate Suggestions'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </div>
+
+                {tailoringResult && (
+                  <div className="space-y-4 max-h-[40vh] overflow-y-auto pt-4 border-t">
+                     {tailoringResult.recommendations && (
+                      <div>
+                        <h3 className="font-bold mb-2">Recommendations</h3>
+                         <Button onClick={handleViewRecommendations} variant="outline" size="sm">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View Courses & Projects
+                        </Button>
+                      </div>
+                     )}
+                    <div>
+                      <h3 className="font-bold mb-2">AI Suggestions</h3>
+                      <div className="text-sm p-4 bg-muted rounded-md whitespace-pre-wrap">{tailoringResult.suggestions}</div>
+                    </div>
+                     {hasActionableSuggestions && (
+                       <>
+                          <Separator />
+                          <div className="p-4 bg-background rounded-md space-y-3">
+                              <h4 className="font-semibold">Implement Suggestions?</h4>
+                              <p className="text-sm text-muted-foreground">
+                                  Would you like the AI to automatically apply these suggestions to your resume?
+                              </p>
+                              <div className="flex justify-end gap-2">
+                                  <Button
+                                      variant="outline"
+                                      onClick={() => {
+                                        toast({ title: "Great!", description: "You can apply the suggestions manually." });
+                                        setIsTailorDialogOpen(false);
+                                      }}
+                                  >
+                                      No, thanks
+                                  </Button>
+                                  <Button onClick={handleApplySuggestions} disabled={isApplying}>
+                                    {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Yes, apply changes
+                                  </Button>
+                              </div>
+                          </div>
+                       </>
+                     )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+         </div>
       </div>
       
       <PersonalDetailsForm resumeData={resumeData} setResumeData={setResumeData} />
