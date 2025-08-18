@@ -156,7 +156,12 @@ function checkDbConfigured() {
 }
 
 export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'userId'>): Promise<{ success: boolean }> {
-    checkDbConfigured();
+    try {
+        checkDbConfigured();
+    } catch (error) {
+        if (error instanceof Error) throw error;
+        throw new Error('An unknown error occurred during DB configuration check.');
+    }
     const userId = await getUserIdFromSession();
     if (!userId) {
         throw new Error('You must be logged in to save a resume.');
@@ -180,7 +185,15 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
 }
 
 export async function loadResumeAction(): Promise<ResumeData | null> {
-    checkDbConfigured();
+    try {
+        checkDbConfigured();
+    } catch (error) {
+       // Fail gracefully if DB is not configured, but don't throw an error
+       // as this action is called on page load.
+       console.warn(error instanceof Error ? error.message : 'DB configuration error');
+       return null;
+    }
+
     const userId = await getUserIdFromSession();
     if (!userId) {
         // This is not an error, it just means no user is logged in.
