@@ -33,8 +33,10 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (res.ok) {
-        toast({ title: 'Success', description: 'Account created. Please log in.' });
-        router.push('/login');
+        toast({ title: 'Success', description: 'Account created. Logging you in...' });
+        // After signup, redirect to the main page. The cookie is already set.
+        router.push('/');
+        router.refresh(); // Important to refresh server components and get new cookie data
       } else {
         toast({
           variant: 'destructive',

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbconnect';
 import User from '@/models/User';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +29,15 @@ export async function POST(req: NextRequest) {
     });
 
     await newUser.save();
+
+    // Set a session cookie upon successful signup
+    const userId = newUser._id.toString();
+    cookies().set('session', userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+    });
 
     return NextResponse.json({ success: true, message: 'User created successfully.', userId: newUser._id }, { status: 201 });
   } catch (error) {

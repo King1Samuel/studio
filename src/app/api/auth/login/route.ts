@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbconnect';
 import User from '@/models/User';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,10 +27,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid credentials.' }, { status: 401 });
     }
 
-    // In a real application, you would create a session/JWT here
-    // For this example, we'll just return success.
+    // Set a session cookie upon successful login
+    const userId = user._id.toString();
+    cookies().set('session', userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+    });
     
-    // We are not returning the full user object for security reasons.
     return NextResponse.json({ success: true, message: 'Login successful.', userId: user._id }, { status: 200 });
   } catch (error) {
     console.error('Login Error:', error);

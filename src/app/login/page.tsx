@@ -34,9 +34,9 @@ export default function LoginPage() {
 
       if (res.ok) {
         toast({ title: 'Success', description: 'Logged in successfully.' });
-        // In a real app, you would handle the session/cookie here
-        // For now, we'll just redirect to the main page.
+        // Redirect to the main page where the resume data will be loaded.
         router.push('/');
+        router.refresh(); // Important to refresh server components and get new cookie data
       } else {
         toast({
           variant: 'destructive',

@@ -85,27 +85,7 @@ export async function applyResumeSuggestionsAction(
 }
 
 
-// Auth actions - Note: these are now unused as auth is handled by API routes.
-// They are kept here for reference or potential future use with a different auth strategy.
-const LoginSchema = z.object({
-  email: z.string(),
-  password: z.string(),
-});
-type LoginInput = z.infer<typeof LoginSchema>;
-
-export async function loginAction(input: LoginInput) {
-    // This is a mock implementation.
-    // In a real app, you would verify credentials with Firebase Auth.
-    cookies().set('session', 'loggedin', { httpOnly: true, secure: true, maxAge: 60 * 60 * 24 });
-    return { success: true };
-}
-
-export async function signUpAction(input: LoginInput) {
-    // This is a mock implementation.
-    // In a real app, you would create a user with Firebase Auth.
-    return { success: true };
-}
-
+// Auth actions
 export async function logoutAction() {
   cookies().delete('session');
   return { success: true };
@@ -122,6 +102,12 @@ function checkDbConfigured() {
     }
 }
 
+async function getUserIdFromSession(): Promise<string | null> {
+    const cookieStore = cookies();
+    const sessionCookie = cookieStore.get('session');
+    return sessionCookie ? sessionCookie.value : null;
+}
+
 export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'userId'>): Promise<{ success: boolean }> {
     try {
         checkDbConfigured();
@@ -130,9 +116,7 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
         throw new Error('An unknown error occurred during DB configuration check.');
     }
     
-    const cookieStore = cookies()
-    const session = cookieStore.get('session');
-    const userId = session?.value === 'loggedin' ? 'mock-user-id' : null; // Use a mock ID for simplicity
+    const userId = await getUserIdFromSession();
 
     if (!userId) {
         throw new Error("You must be logged in to save a resume.");
@@ -143,6 +127,8 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
         const db = client.db(DB_NAME);
         const collection = db.collection(COLLECTION_NAME);
 
+        // We use the user's ID to find their resume document.
+        // `upsert: true` will create the document if it doesn't exist.
         await collection.updateOne(
             { userId: userId },
             { $set: { ...resumeData, userId } },
@@ -163,9 +149,7 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
        return null;
     }
 
-    const cookieStore = cookies()
-    const session = cookieStore.get('session');
-    const userId = session?.value === 'loggedin' ? 'mock-user-id' : null;
+    const userId = await getUserIdFromSession();
 
      if (!userId) {
         // Not an error, just means no one is logged in.
@@ -180,6 +164,7 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
         const result = await collection.findOne({ userId });
 
         if (result) {
+            // Ensure you don't send back the MongoDB internal _id
             const { _id, ...resumeData } = result;
             return resumeData as ResumeData;
         }
