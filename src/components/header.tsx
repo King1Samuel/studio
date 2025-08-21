@@ -2,14 +2,11 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Download, LogOut } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Packer } from 'docx';
 import { saveAs } from 'file-saver';
 import type { ResumeData } from '@/lib/types';
-import { logoutAction } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
 import { generateDocx } from '@/lib/docx-generator';
 import { generatePdf } from '@/lib/pdf-generator';
 
@@ -19,22 +16,6 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
-  const { toast } = useToast();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-        await logoutAction();
-        toast({ title: "Logged Out", description: "You have been successfully logged out." });
-        router.push('/login');
-    } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Logout Failed',
-          description: error instanceof Error ? error.message : 'An unknown error occurred.',
-        });
-    }
-  };
 
   const handleDownloadPdf = () => {
     generatePdf(resumeData);
@@ -58,10 +39,6 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
         <Button variant="outline" size="sm" onClick={handleDownloadWord}>
           <Download />
           Word
-        </Button>
-         <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut />
-            Logout
         </Button>
       </div>
     </header>
