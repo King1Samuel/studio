@@ -102,7 +102,7 @@ export async function loginAction(input: LoginInput) {
     const auth = getAuth(app);
     const userCredential = await signInWithEmailAndPassword(auth, input.email, input.password);
     const idToken = await userCredential.user.getIdToken();
-    cookies().set('session', idToken, { httpOnly: true, secure: true, maxAge: 60 * 60 * 24 });
+    cookies().set('session', idToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24, path: '/' });
     return { success: true };
   } catch(error: any) {
     return { success: false, error: error.message };
@@ -133,42 +133,50 @@ export async function signUpAction(input: LoginInput) {
     const userCredential = await createUserWithEmailAndPassword(auth, input.email, input.password);
     const userId = userCredential.user.uid;
 
-    // Now, create a document in MongoDB for the new user
     await checkDbConfigured();
     const client = await clientPromise;
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
     
-    // Create a base resume from initial data but customize it for the new user.
-    const { name, title, contact, ...restOfInitialData } = initialData;
+    // Check if an unclaimed resume exists with this email
+    const existingResume = await collection.findOne({ 'contact.email': input.email, userId: { $exists: false } });
 
-    const newUserResumeData = {
-      ...restOfInitialData,
-      userId: userId,
-      name: 'Your Name', // Placeholder
-      title: 'Your Title', // Placeholder
-      contact: {
-        ...contact,
-        email: input.email, // Use their sign-up email
-        phone: '', // Clear personal data
-        linkedin: '',
-        github: '',
-      },
-      professionalSummary: 'A brief summary of your professional background.',
-      workExperience: [],
-      education: [],
-      skills: [],
-      tools: [],
-      languages: [],
-      highlights: '',
-      links: [],
-    };
-    
-    await collection.insertOne(newUserResumeData);
+    if (existingResume) {
+      // If it exists, claim it by adding the new userId
+      await collection.updateOne(
+        { _id: existingResume._id },
+        { $set: { userId: userId } }
+      );
+    } else {
+      // If not, create a new blank resume for the user
+      const { name, title, contact, ...restOfInitialData } = initialData;
+
+      const newUserResumeData = {
+        ...restOfInitialData,
+        userId: userId,
+        name: 'Your Name', 
+        title: 'Your Title',
+        contact: {
+          ...contact,
+          email: input.email,
+          phone: '',
+          linkedin: '',
+          github: '',
+        },
+        professionalSummary: 'A brief summary of your professional background.',
+        workExperience: [],
+        education: [],
+        skills: [],
+        tools: [],
+        languages: [],
+        highlights: '',
+        links: [],
+      };
+      await collection.insertOne(newUserResumeData);
+    }
 
     return { success: true };
   } catch(error: any) {
-    // Provide a more user-friendly error message for common Firebase errors
     if (error.code === 'auth/email-already-in-use') {
          return { success: false, error: "This email is already in use. Please try logging in." };
     }
