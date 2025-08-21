@@ -3,21 +3,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { signupAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { z } from 'zod';
 
 const AuthSchema = z.object({
-    email: z.string().email({ message: "Invalid email address." }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+    email: z.string().email(),
+    password: z.string().min(6),
 });
 
 
@@ -25,19 +23,14 @@ export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const form = useForm<z.infer<typeof AuthSchema>>({
-    resolver: zodResolver(AuthSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  const handleSubmit = async (values: z.infer<typeof AuthSchema>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      const result = await signupAction(values);
+      const result = await signupAction({ email, password });
        if (result.success) {
         toast({ title: 'Success', description: 'Account created! Please log in.' });
         router.push('/login');
@@ -64,50 +57,43 @@ export default function SignupPage() {
             Enter your information to create an account.
           </CardDescription>
         </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-                <CardContent className="grid gap-4">
-                     <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="m@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+        <form onSubmit={handleSubmit}>
+            <CardContent className="grid gap-4">
+                 <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="m@example.com" 
+                        required 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                     />
-                     <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                    <Input type="password" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input 
+                        id="password" 
+                        type="password" 
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                     />
-                </CardContent>
-                <CardFooter className="flex flex-col gap-4">
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Create account
-                    </Button>
-                    <div className="mt-4 text-center text-sm">
-                        Already have an account?{' '}
-                        <Link href="/login" className="underline">
-                            Log in
-                        </Link>
-                    </div>
-                </CardFooter>
-            </form>
-        </Form>
+                </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create account
+                </Button>
+                <div className="mt-4 text-center text-sm">
+                    Already have an account?{' '}
+                    <Link href="/login" className="underline">
+                        Log in
+                    </Link>
+                </div>
+            </CardFooter>
+        </form>
       </Card>
     </main>
   );
