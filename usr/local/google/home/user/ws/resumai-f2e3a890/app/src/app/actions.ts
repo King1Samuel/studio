@@ -29,6 +29,9 @@ import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import { initialData } from '@/lib/initial-data';
+import { MongoClient } from 'mongodb';
+
 
 // AI actions
 export async function generateSummaryAction(
@@ -106,10 +109,59 @@ export async function loginAction(input: LoginInput) {
   }
 }
 
+async function getUserIdFromSession(): Promise<string | null> {
+    const cookieStore = cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+
+    if (!sessionToken) return null;
+
+    try {
+        // In a real app, you would use firebase-admin to verify the token
+        // For this mock, we'll just decode it to get the user_id (uid)
+        const decodedToken = JSON.parse(Buffer.from(sessionToken.split('.')[1], 'base64').toString());
+        return decodedToken.user_id;
+    } catch (error) {
+        console.error("Error decoding token:", error);
+        return null;
+    }
+}
+
+
 export async function signUpAction(input: LoginInput) {
   try {
     const auth = getAuth(app);
-    await createUserWithEmailAndPassword(auth, input.email, input.password);
+    const userCredential = await createUserWithEmailAndPassword(auth, input.email, input.password);
+    const userId = userCredential.user.uid;
+
+    // Now, create a document in MongoDB for the new user
+    await checkDbConfigured();
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection(COLLECTION_NAME);
+    
+    const { name, title, contact, ...restOfInitialData } = initialData;
+
+    await collection.insertOne({
+      userId: userId,
+      name: 'Your Name',
+      title: 'Your Title',
+      contact: {
+        email: input.email,
+        phone: '',
+        linkedin: '',
+        github: '',
+      },
+      ...restOfInitialData,
+      professionalSummary: 'A brief summary of your professional background.',
+      workExperience: [],
+      education: [],
+      skills: [],
+      tools: [],
+      languages: [],
+      highlights: '',
+      links: [],
+    });
+
     return { success: true };
   } catch(error: any) {
     return { success: false, error: error.message };
@@ -140,9 +192,7 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
         throw new Error('An unknown error occurred during DB configuration check.');
     }
     
-    const cookieStore = cookies()
-    const session = cookieStore.get('session');
-    const userId = session?.value ? 'mock-user-id' : null; // In a real app, you'd decode the token to get the user ID
+    const userId = await getUserIdFromSession();
 
     if (!userId) {
         throw new Error("You must be logged in to save a resume.");
@@ -173,9 +223,7 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
        return null;
     }
 
-    const cookieStore = cookies()
-    const session = cookieStore.get('session');
-    const userId = session?.value ? 'mock-user-id' : null;
+    const userId = await getUserIdFromSession();
 
      if (!userId) {
         // Not an error, just means no one is logged in.
