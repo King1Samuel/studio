@@ -85,7 +85,8 @@ export async function applyResumeSuggestionsAction(
 }
 
 
-// Auth actions
+// Auth actions - Note: these are now unused as auth is handled by API routes.
+// They are kept here for reference or potential future use with a different auth strategy.
 const LoginSchema = z.object({
   email: z.string(),
   password: z.string(),

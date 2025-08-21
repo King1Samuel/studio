@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { loginAction } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -23,16 +22,33 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const result = await loginAction({ email, password });
-      if (result.success) {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
         toast({ title: 'Success', description: 'Logged in successfully.' });
+        // In a real app, you would handle the session/cookie here
+        // For now, we'll just redirect to the main page.
         router.push('/');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: data.message || 'An unknown error occurred.',
+        });
       }
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        description: 'An error occurred while connecting to the server.',
       });
     } finally {
       setIsLoading(false);
