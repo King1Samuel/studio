@@ -30,7 +30,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { initialData } from '@/lib/initial-data';
-import { MongoClient } from 'mongodb';
+import { adminAuth } from '@/lib/firebase-admin';
 
 
 // AI actions
@@ -116,12 +116,12 @@ async function getUserIdFromSession(): Promise<string | null> {
     if (!sessionToken) return null;
 
     try {
-        // In a real app, you would use firebase-admin to verify the token
-        // For this mock, we'll just decode it to get the user_id (uid)
-        const decodedToken = JSON.parse(Buffer.from(sessionToken.split('.')[1], 'base64').toString());
-        return decodedToken.user_id;
+        const decodedToken = await adminAuth.verifyIdToken(sessionToken);
+        return decodedToken.uid;
     } catch (error) {
-        console.error("Error decoding token:", error);
+        console.error("Error verifying session token:", error);
+        // If token is invalid, delete the cookie
+        cookies().delete('session');
         return null;
     }
 }
@@ -139,19 +139,21 @@ export async function signUpAction(input: LoginInput) {
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
     
+    // Create a base resume from initial data but customize it for the new user.
     const { name, title, contact, ...restOfInitialData } = initialData;
 
-    await collection.insertOne({
+    const newUserResumeData = {
+      ...restOfInitialData,
       userId: userId,
-      name: 'Your Name',
-      title: 'Your Title',
+      name: 'Your Name', // Placeholder
+      title: 'Your Title', // Placeholder
       contact: {
-        email: input.email,
-        phone: '',
+        ...contact,
+        email: input.email, // Use their sign-up email
+        phone: '', // Clear personal data
         linkedin: '',
         github: '',
       },
-      ...restOfInitialData,
       professionalSummary: 'A brief summary of your professional background.',
       workExperience: [],
       education: [],
@@ -160,10 +162,20 @@ export async function signUpAction(input: LoginInput) {
       languages: [],
       highlights: '',
       links: [],
-    });
+    };
+    
+    await collection.insertOne(newUserResumeData);
 
     return { success: true };
   } catch(error: any) {
+    // Provide a more user-friendly error message for common Firebase errors
+    if (error.code === 'auth/email-already-in-use') {
+         return { success: false, error: "This email is already in use. Please try logging in." };
+    }
+    if (error.code === 'auth/weak-password') {
+         return { success: false, error: "The password is too weak. It should be at least 6 characters long." };
+    }
+    console.error("Sign up error:", error);
     return { success: false, error: error.message };
   }
 }
@@ -241,6 +253,8 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
             const { _id, ...resumeData } = result;
             return resumeData as ResumeData;
         }
+        // If no resume is found for the user (e.g., first login after signup),
+        // we can return null and the frontend will handle it.
         return null;
     } catch (error) {
         console.error('Error loading resume:', error);
