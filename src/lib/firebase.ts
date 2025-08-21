@@ -13,7 +13,6 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-// In a Next.js app, we need to make sure we are initializing the app only once.
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);

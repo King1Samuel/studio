@@ -26,8 +26,7 @@ import {
 import type { ImportResumeOutput, ResumeData } from '@/lib/types';
 import clientPromise from '@/lib/mongodb';
 import { z } from 'zod';
-import { ObjectId } from 'mongodb';
-
+import { cookies } from 'next/headers';
 
 // AI actions
 export async function generateSummaryAction(
@@ -86,10 +85,35 @@ export async function applyResumeSuggestionsAction(
 }
 
 
+// Auth actions
+const LoginSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+});
+type LoginInput = z.infer<typeof LoginSchema>;
+
+export async function loginAction(input: LoginInput) {
+    // This is a mock implementation.
+    // In a real app, you would verify credentials with Firebase Auth.
+    cookies().set('session', 'loggedin', { httpOnly: true, secure: true, maxAge: 60 * 60 * 24 });
+    return { success: true };
+}
+
+export async function signUpAction(input: LoginInput) {
+    // This is a mock implementation.
+    // In a real app, you would create a user with Firebase Auth.
+    return { success: true };
+}
+
+export async function logoutAction() {
+  cookies().delete('session');
+  return { success: true };
+}
+
+
 // Database actions
 const DB_NAME = 'resumaiDB';
 const COLLECTION_NAME = 'resumes';
-const SINGLE_RESUME_ID = '66a0238b7077a2d30802d815'; // A fixed ID for the single resume
 
 function checkDbConfigured() {
     if (!process.env.MONGODB_URI || process.env.MONGODB_URI === "your_mongodb_connection_string_here") {
@@ -104,6 +128,14 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
         if (error instanceof Error) throw error;
         throw new Error('An unknown error occurred during DB configuration check.');
     }
+    
+    const cookieStore = cookies()
+    const session = cookieStore.get('session');
+    const userId = session?.value === 'loggedin' ? 'mock-user-id' : null; // Use a mock ID for simplicity
+
+    if (!userId) {
+        throw new Error("You must be logged in to save a resume.");
+    }
 
     try {
         const client = await clientPromise;
@@ -111,8 +143,8 @@ export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'use
         const collection = db.collection(COLLECTION_NAME);
 
         await collection.updateOne(
-            { _id: new ObjectId(SINGLE_RESUME_ID) },
-            { $set: { ...resumeData } },
+            { userId: userId },
+            { $set: { ...resumeData, userId } },
             { upsert: true }
         );
         return { success: true };
@@ -126,10 +158,17 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
     try {
         checkDbConfigured();
     } catch (error) {
-       // Fail gracefully if DB is not configured, but don't throw an error
-       // as this action is called on page load.
        console.warn(error instanceof Error ? error.message : 'DB configuration error');
        return null;
+    }
+
+    const cookieStore = cookies()
+    const session = cookieStore.get('session');
+    const userId = session?.value === 'loggedin' ? 'mock-user-id' : null;
+
+     if (!userId) {
+        // Not an error, just means no one is logged in.
+        return null;
     }
 
     try {
@@ -137,10 +176,9 @@ export async function loadResumeAction(): Promise<ResumeData | null> {
         const db = client.db(DB_NAME);
         const collection = db.collection(COLLECTION_NAME);
 
-        const result = await collection.findOne({ _id: new ObjectId(SINGLE_RESUME_ID) });
+        const result = await collection.findOne({ userId });
 
         if (result) {
-            // The _id is not part of the ResumeData type, so we remove it.
             const { _id, ...resumeData } = result;
             return resumeData as ResumeData;
         }

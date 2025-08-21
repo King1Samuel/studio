@@ -3,12 +3,14 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import { Packer } from 'docx';
 import { saveAs } from 'file-saver';
 import type { ResumeData } from '@/lib/types';
 import { generateDocx } from '@/lib/docx-generator';
 import { generatePdf } from '@/lib/pdf-generator';
+import { logoutAction } from '@/app/actions';
+import { useRouter } from 'next/navigation';
 
 interface AppHeaderProps {
   resumePreviewRef: React.RefObject<HTMLDivElement>;
@@ -16,6 +18,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
+  const router = useRouter();
 
   const handleDownloadPdf = () => {
     generatePdf(resumeData);
@@ -26,6 +29,11 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
     Packer.toBlob(doc).then(blob => {
       saveAs(blob, "resume.docx");
     });
+  };
+
+  const handleLogout = async () => {
+    await logoutAction();
+    router.push('/login');
   };
 
   return (
@@ -39,6 +47,10 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
         <Button variant="outline" size="sm" onClick={handleDownloadWord}>
           <Download />
           Word
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
         </Button>
       </div>
     </header>
