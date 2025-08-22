@@ -17,8 +17,9 @@ import { MiscForm } from './forms/misc-form';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ExternalLink, Upload, Loader2, Save, FolderOpen } from 'lucide-react';
+import { ExternalLink, Upload, Loader2 } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { ResumeActions } from './resume-actions';
 
 interface ResumeFormProps {
   resumeData: ResumeData;
@@ -302,16 +303,12 @@ export function ResumeForm({ resumeData, setResumeData, onLoadResume, isLoadingR
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold font-headline">Resume Editor</h2>
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={handleSaveResume} disabled={isSaving}>
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={onLoadResume} disabled={isLoadingResume}>
-              {isLoadingResume ? <Loader2 className="animate-spin" /> : <FolderOpen />}
-              Load
-            </Button>
-        </div>
+        <ResumeActions 
+          onSave={handleSaveResume}
+          onLoad={onLoadResume}
+          isSaving={isSaving}
+          isLoading={isLoadingResume}
+        />
       </div>
       <Separator />
       <div className="flex justify-between items-center">
