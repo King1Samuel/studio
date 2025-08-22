@@ -27,6 +27,7 @@ import type { ImportResumeOutput, ResumeData } from '@/lib/types';
 import clientPromise from '@/lib/mongodb';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
+import { adminAuth } from '@/lib/firebase-admin';
 
 // AI actions
 export async function generateSummaryAction(
@@ -103,9 +104,17 @@ function checkDbConfigured() {
 }
 
 async function getUserIdFromSession(): Promise<string | null> {
-    const cookieStore = cookies();
-    const sessionCookie = cookieStore.get('session');
-    return sessionCookie ? sessionCookie.value : null;
+    const sessionCookie = cookies().get('session')?.value;
+    if (!sessionCookie) {
+        return null;
+    }
+    try {
+        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+        return decodedToken.uid;
+    } catch (error) {
+        console.error('Error verifying session cookie:', error);
+        return null;
+    }
 }
 
 export async function saveResumeAction(resumeData: Omit<ResumeData, '_id' | 'userId'>): Promise<{ success: boolean }> {

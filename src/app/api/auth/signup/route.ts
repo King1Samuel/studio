@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbconnect';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
+import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,16 +31,21 @@ export async function POST(req: NextRequest) {
 
     await newUser.save();
 
-    // Set a session cookie upon successful signup
     const userId = newUser._id.toString();
-    cookies().set('session', userId, {
+    
+    // Create a session cookie
+    const sessionCookie = await adminAuth.createSessionCookie(userId, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
+    cookies().set('session', sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 5, // 5 days
       path: '/',
     });
+    
+    // Create a custom token for client-side sign-in
+    const customToken = await adminAuth.createCustomToken(userId);
 
-    return NextResponse.json({ success: true, message: 'User created successfully.', userId: newUser._id }, { status: 201 });
+    return NextResponse.json({ success: true, message: 'User created successfully.', customToken }, { status: 201 });
   } catch (error) {
     console.error('Signup Error:', error);
     return NextResponse.json({ success: false, message: 'An internal server error occurred.' }, { status: 500 });

@@ -3,16 +3,25 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
  
 // This middleware is currently not enforcing any routes and is just a placeholder.
-// In a real application with session management (e.g., JWT), you would add logic here
+// In a real application, you would add logic here
 // to protect routes based on the presence and validity of a session token.
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const session = request.cookies.get('session')?.value
+
+  // If no session cookie, and trying to access a protected page, redirect to login
+  if (!session && request.nextUrl.pathname.startsWith('/')) {
+     if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') {
+         return NextResponse.next();
+     }
+     // Redirect to login for any other page if not authenticated.
+     // return NextResponse.redirect(new URL('/login', request.url));
+  }
  
-  // Example: If trying to access the main page without a session, redirect to login
-  // const session = request.cookies.get('session-token');
-  // if (!session && request.nextUrl.pathname === '/') {
-  //   return NextResponse.redirect(new URL('/login', request.url));
-  // }
- 
+  // If there is a session, and they are trying to access login/signup, redirect to home
+  if (session && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+      return NextResponse.redirect(new URL('/', request.url));
+  }
+
   return NextResponse.next();
 }
  

@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const auth = getAuth(app);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,11 +35,11 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      if (res.ok) {
+      if (res.ok && data.customToken) {
+        await signInWithCustomToken(auth, data.customToken);
         toast({ title: 'Success', description: 'Logged in successfully.' });
-        // Redirect to the main page where the resume data will be loaded.
         router.push('/');
-        router.refresh(); // Important to refresh server components and get new cookie data
+        router.refresh();
       } else {
         toast({
           variant: 'destructive',
