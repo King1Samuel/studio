@@ -12,21 +12,30 @@ import admin from 'firebase-admin';
 //    and paste the entire JSON content as its value.
 //    Example: FIREBASE_SERVICE_ACCOUNT_KEY='{"type": "service_account", ...}'
 
+let adminAuth: admin.auth.Auth;
+
 if (!admin.apps.length) {
   try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Please follow the setup instructions in src/lib/firebase-admin.ts.");
+    }
     const serviceAccount = JSON.parse(
       process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
     );
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+    adminAuth = admin.auth();
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
-    // Provide a more helpful error message for the common setup issue.
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        console.error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Please follow the setup instructions in src/lib/firebase-admin.ts.");
-    }
+    // To prevent the app from crashing when the admin SDK is not configured,
+    // we'll use a dummy object for adminAuth. Any attempts to use it will fail,
+    // but the app itself won't crash on startup.
+    adminAuth = {} as admin.auth.Auth;
   }
+} else {
+    adminAuth = admin.auth();
 }
 
-export const adminAuth = admin.auth();
+
+export { adminAuth };
