@@ -11,7 +11,6 @@ import { generateDocx } from '@/lib/docx-generator';
 import { generatePdf } from '@/lib/pdf-generator';
 import { logoutAction } from '@/app/actions';
 import { useRouter } from 'next/navigation';
-import { UserNav } from './user-nav';
 
 interface AppHeaderProps {
   resumePreviewRef: React.RefObject<HTMLDivElement>;
@@ -32,6 +31,12 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
     });
   };
 
+  const handleLogout = async () => {
+    await logoutAction();
+    router.push('/login');
+    router.refresh();
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <h1 className="text-xl font-bold font-headline">Resum<span className="text-primary/80">AI</span></h1>
@@ -44,7 +49,10 @@ export function AppHeader({ resumePreviewRef, resumeData }: AppHeaderProps) {
           <Download className="mr-2 h-4 w-4" />
           Word
         </Button>
-        <UserNav />
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </header>
   );

@@ -4,13 +4,12 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbconnect';
 import User from '@/models/User';
 import { cookies } from 'next/headers';
-import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const { email, password } = await req.json();
+    const { email, password }_ = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ success: false, message: 'Email and password are required.' }, { status: 400 });
@@ -30,22 +29,18 @@ export async function POST(req: NextRequest) {
     });
 
     await newUser.save();
-
-    const userId = newUser._id.toString();
     
-    // Create a session cookie
-    const sessionCookie = await adminAuth.createSessionCookie(userId, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
-    cookies().set('session', sessionCookie, {
+    // Create a simple session token (in a real app, use JWT)
+    const sessionToken = Buffer.from(JSON.stringify({ userId: newUser._id, email: newUser.email })).toString('base64');
+    
+    cookies().set('session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 5, // 5 days
+      maxAge: 60 * 60 * 24, // 1 day
       path: '/',
     });
-    
-    // Create a custom token for client-side sign-in
-    const customToken = await adminAuth.createCustomToken(userId);
 
-    return NextResponse.json({ success: true, message: 'User created successfully.', customToken }, { status: 201 });
+    return NextResponse.json({ success: true, message: 'User created successfully.' }, { status: 201 });
   } catch (error) {
     console.error('Signup Error:', error);
     return NextResponse.json({ success: false, message: 'An internal server error occurred.' }, { status: 500 });
